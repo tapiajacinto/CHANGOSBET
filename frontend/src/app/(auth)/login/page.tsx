@@ -2,11 +2,12 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { Button, Input, PasswordInput } from '@/components/ui';
+import { Button, Icon } from '@/components/ui';
+import { AuthField } from '@/components/auth/AuthField';
 
 export default function LoginPage() {
   const { login } = useAuth();
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -14,36 +15,32 @@ export default function LoginPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!phone.trim() || !password) { setError('Completá teléfono y contraseña.'); return; }
+    if (!email.trim() || !password) return setError('Completá email y contraseña.');
     setLoading(true);
-    const { error } = await login({ phone, password });
+    const { error } = await login({ email, password });
     setLoading(false);
     if (error) setError(error);
-    // si OK, el layout redirige
   };
 
   return (
-    <div className="rounded-4xl bg-white p-7 shadow-brand-lg">
-      <h2 className="font-display text-xl font-bold text-brand-900">Iniciar sesión</h2>
-      <p className="mb-5 text-sm text-gray-400">Entrá con tu teléfono y contraseña.</p>
+    <div className="w-full max-w-md rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-brand-lg backdrop-blur-xl sm:p-8">
+      <h2 className="font-display text-2xl font-bold">Iniciar sesión</h2>
+      <p className="mb-6 mt-1 text-sm text-white/45">Entrá con tu email y contraseña.</p>
 
       <form onSubmit={submit} className="space-y-4">
-        <Input
-          label="Teléfono" name="phone" type="tel" inputMode="tel" autoComplete="tel"
-          placeholder="Ej: 11 2345 6789" leftIcon="📱"
-          value={phone} onChange={(e) => { setPhone(e.target.value); setError(null); }}
-        />
-        <PasswordInput
-          label="Contraseña" name="password" autoComplete="current-password" placeholder="••••••••"
-          value={password} onChange={(e) => { setPassword(e.target.value); setError(null); }}
-          error={error}
-        />
-        <Button type="submit" fullWidth size="lg" loading={loading}>Entrar 🎲</Button>
+        <AuthField label="Email" name="email" type="email" inputMode="email" icon="mail" placeholder="vos@email.com"
+          value={email} onChange={(e) => { setEmail(e.target.value); setError(null); }} autoComplete="email" />
+        <AuthField label="Contraseña" name="password" type="password" icon="lock" placeholder="••••••••"
+          value={password} onChange={(e) => { setPassword(e.target.value); setError(null); }} autoComplete="current-password" error={error} />
+
+        <Button type="submit" variant="gold" size="lg" fullWidth loading={loading} rightIcon={<Icon name="arrowRight" size={18} />}>
+          Entrar
+        </Button>
       </form>
 
-      <p className="mt-5 text-center text-sm text-gray-500">
+      <p className="mt-5 text-center text-sm text-white/45">
         ¿No tenés cuenta?{' '}
-        <Link href="/register" className="font-bold text-brand-700 hover:underline">Registrate</Link>
+        <Link href="/register" className="font-bold text-gold-300 hover:text-gold-200">Registrate</Link>
       </p>
     </div>
   );

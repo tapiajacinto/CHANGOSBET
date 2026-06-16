@@ -4,9 +4,11 @@ import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import {
-  Avatar, Badge, Button, Card, CardTitle, EmptyState, Money, SkeletonRows, Tabs,
+  Avatar, Badge, Button, Card, EmptyState, Icon, Money, SectionHeader, SkeletonRows, Tabs,
 } from '@/components/ui';
-import { formatDateTime } from '@/lib/format';
+import type { IconName } from '@/components/ui';
+import { formatDateTime, timeAgo } from '@/lib/format';
+import { cn } from '@/lib/cn';
 import type { Profile, Transaction, TxnType } from '@/types/database';
 
 const TYPE_LABELS: Record<TxnType, string> = {
@@ -27,6 +29,16 @@ const TYPE_TONE: Record<TxnType, 'green' | 'red' | 'gold' | 'blue' | 'amber' | '
   float_assign: 'gold',
   adjustment: 'blue',
   settlement: 'gray',
+};
+
+const TYPE_ICON: Record<TxnType, IconName> = {
+  cashier_load: 'plus',
+  cashier_withdraw: 'minus',
+  bet: 'dice',
+  win: 'trophy',
+  float_assign: 'chip',
+  adjustment: 'refresh',
+  settlement: 'check',
 };
 
 type DateFilter = 'today' | '7d' | '30d' | 'all';
@@ -84,36 +96,43 @@ export default function HistorialPage() {
   }, [rows]);
 
   return (
-    <div className="space-y-6">
-      <header className="flex items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-extrabold text-brand-900">Historial</h1>
-          <p className="text-sm text-gray-400">Tus movimientos de caja.</p>
-        </div>
-        <Button variant="subtle" size="sm" onClick={load} leftIcon={<span>↻</span>}>Actualizar</Button>
-      </header>
+    <div className="ambient space-y-6 animate-fade-up">
+      <SectionHeader
+        eyebrow="Historial"
+        title="Movimientos de caja"
+        subtitle="Cargas y retiros que procesaste."
+        action={
+          <Button variant="subtle" size="sm" onClick={load} leftIcon={<Icon name="refresh" size={16} />}>Actualizar</Button>
+        }
+      />
 
       {/* Filtros */}
-      <div className="flex flex-wrap items-center gap-3">
-        <Tabs
-          value={dateF}
-          onChange={setDateF}
-          options={[
-            { value: 'today', label: 'Hoy' },
-            { value: '7d', label: '7 días' },
-            { value: '30d', label: '30 días' },
-            { value: 'all', label: 'Todo' },
-          ]}
-        />
-        <Tabs
-          value={typeF}
-          onChange={setTypeF}
-          options={[
-            { value: 'all', label: 'Todos' },
-            { value: 'cashier_load', label: 'Cargas' },
-            { value: 'cashier_withdraw', label: 'Retiros' },
-          ]}
-        />
+      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:gap-6">
+        <div className="space-y-1.5">
+          <span className="block text-[11px] uppercase tracking-wider text-fg-subtle">Período</span>
+          <Tabs
+            value={dateF}
+            onChange={setDateF}
+            options={[
+              { value: 'today', label: 'Hoy' },
+              { value: '7d', label: '7 días' },
+              { value: '30d', label: '30 días' },
+              { value: 'all', label: 'Todo' },
+            ]}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <span className="block text-[11px] uppercase tracking-wider text-fg-subtle">Tipo</span>
+          <Tabs
+            value={typeF}
+            onChange={setTypeF}
+            options={[
+              { value: 'all', label: 'Todos' },
+              { value: 'cashier_load', label: 'Cargas' },
+              { value: 'cashier_withdraw', label: 'Retiros' },
+            ]}
+          />
+        </div>
       </div>
 
       {/* Resumen del período */}
@@ -130,30 +149,42 @@ export default function HistorialPage() {
           <div className="p-5"><SkeletonRows rows={6} /></div>
         ) : rows.length === 0 ? (
           <div className="p-5">
-            <EmptyState icon="📭" title="Sin movimientos" subtitle="No hay transacciones para este filtro." />
+            <EmptyState icon={<Icon name="copy" size={36} />} title="Sin movimientos" subtitle="No hay transacciones para este filtro." />
           </div>
         ) : (
           <>
             {/* ─── MOBILE: cards ─── */}
-            <ul className="divide-y divide-brand-50 md:hidden">
+            <ul className="divide-y divide-line md:hidden">
               {rows.map((r) => {
-                const isCredit = r.type === 'cashier_load' || r.type === 'win' || r.type === 'float_assign';
+                const isCashierCredit = r.type === 'cashier_load';
+                const isCashierDebit = r.type === 'cashier_withdraw';
+                const isCashierOp = isCashierCredit || isCashierDebit;
+                const amountClass = isCashierCredit
+                  ? 'text-win-600 dark:text-win-400'
+                  : isCashierDebit
+                    ? 'text-brand-500'
+                    : 'text-fg';
                 return (
-                  <li key={r.id} className="flex items-center gap-3 p-4">
-                    <Avatar alias={r.player?.alias ?? '🪙'} size={40} />
+                  <li key={r.id} className="flex items-center gap-3 p-4 transition-colors hover:bg-surface-2">
+                    <span className={cn('grid h-10 w-10 shrink-0 place-items-center rounded-2xl',
+                      isCashierCredit ? 'bg-win-500/12 text-win-600 dark:text-win-400'
+                        : isCashierDebit ? 'bg-brand-500/12 text-brand-500'
+                          : 'bg-surface-2 text-fg-muted')}>
+                      <Icon name={TYPE_ICON[r.type]} size={18} />
+                    </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <Badge tone={TYPE_TONE[r.type]}>{TYPE_LABELS[r.type]}</Badge>
-                        <span className="truncate text-sm font-bold text-brand-900">
+                        <span className="truncate text-sm font-bold text-fg">
                           {r.player?.alias ?? '—'}
                         </span>
+                        <Badge tone={TYPE_TONE[r.type]}>{TYPE_LABELS[r.type]}</Badge>
                       </div>
-                      <p className="mt-0.5 text-xs text-gray-400">{formatDateTime(r.created_at)}</p>
+                      <p className="mt-0.5 text-xs text-fg-muted">{timeAgo(r.created_at)}</p>
                     </div>
                     <Money
                       value={r.amount}
-                      signed
-                      className={isCredit ? 'text-green-600' : 'text-red-600'}
+                      signed={isCashierOp}
+                      className={cn('font-display font-extrabold', amountClass)}
                     />
                   </li>
                 );
@@ -164,28 +195,45 @@ export default function HistorialPage() {
             <div className="hidden md:block">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-brand-100 text-left text-xs uppercase tracking-wider text-gray-400">
+                  <tr className="border-b border-line text-left text-[11px] uppercase tracking-wider text-fg-subtle">
                     <th className="px-5 py-3 font-semibold">Tipo</th>
                     <th className="px-5 py-3 font-semibold">Jugador</th>
                     <th className="px-5 py-3 font-semibold">Fecha</th>
                     <th className="px-5 py-3 text-right font-semibold">Monto</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-brand-50">
+                <tbody className="divide-y divide-line">
                   {rows.map((r) => {
-                    const isCredit = r.type === 'cashier_load' || r.type === 'win' || r.type === 'float_assign';
+                    const isCashierCredit = r.type === 'cashier_load';
+                    const isCashierDebit = r.type === 'cashier_withdraw';
+                    const isCashierOp = isCashierCredit || isCashierDebit;
+                    const amountClass = isCashierCredit
+                      ? 'text-win-600 dark:text-win-400'
+                      : isCashierDebit
+                        ? 'text-brand-500'
+                        : 'text-fg';
                     return (
-                      <tr key={r.id} className="transition-colors hover:bg-brand-50/40">
-                        <td className="px-5 py-3"><Badge tone={TYPE_TONE[r.type]}>{TYPE_LABELS[r.type]}</Badge></td>
+                      <tr key={r.id} className="transition-colors hover:bg-surface-2">
+                        <td className="px-5 py-3">
+                          <span className="inline-flex items-center gap-2">
+                            <span className={cn('grid h-7 w-7 place-items-center rounded-lg',
+                              isCashierCredit ? 'bg-win-500/12 text-win-600 dark:text-win-400'
+                                : isCashierDebit ? 'bg-brand-500/12 text-brand-500'
+                                  : 'bg-surface-2 text-fg-muted')}>
+                              <Icon name={TYPE_ICON[r.type]} size={14} />
+                            </span>
+                            <Badge tone={TYPE_TONE[r.type]}>{TYPE_LABELS[r.type]}</Badge>
+                          </span>
+                        </td>
                         <td className="px-5 py-3">
                           <div className="flex items-center gap-2">
-                            <Avatar alias={r.player?.alias ?? '🪙'} size={30} />
-                            <span className="font-semibold text-brand-900">{r.player?.alias ?? '—'}</span>
+                            <Avatar alias={r.player?.alias ?? '?'} size={30} />
+                            <span className="font-semibold text-fg">{r.player?.alias ?? '—'}</span>
                           </div>
                         </td>
-                        <td className="px-5 py-3 text-gray-500">{formatDateTime(r.created_at)}</td>
+                        <td className="px-5 py-3 text-fg-muted" title={formatDateTime(r.created_at)}>{timeAgo(r.created_at)}</td>
                         <td className="px-5 py-3 text-right">
-                          <Money value={r.amount} signed className={isCredit ? 'text-green-600' : 'text-red-600'} />
+                          <Money value={r.amount} signed={isCashierOp} className={cn('font-display font-extrabold', amountClass)} />
                         </td>
                       </tr>
                     );

@@ -2,24 +2,61 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ════════════════════════════════════════════════════════════════════════
+   CHANGOSBET — Carbón Premium
+   Dark = grafito cálido (no negro puro) · oro SUTIL · rojo marca · win-green
+   Tokens semánticos en canales RGB para soportar /<alpha-value>.
+   ════════════════════════════════════════════════════════════════════════ */
+
 :root {
-  --brand:        #c0000a;
-  --brand-deep:   #7f0000;
-  --brand-light:  #ed2f2f;
-  --gold:         #e8b923;
-  --surface:      #ffffff;
-  --surface-soft: #fff8f6;
-  /* legacy aliases (juegos) */
+  /* ── Modo CLARO ── */
+  --bg:         250 248 251;
+  --surface:    255 255 255;
+  --surface-2:  245 242 248;
+  --surface-3:  237 233 242;
+  --line:       231 226 237;
+  --line-2:     216 210 224;
+  --fg:          26 18 26;
+  --fg-muted:    99 88 106;
+  --fg-subtle:  143 133 150;
+
+  /* Acentos (constantes salvo override por tema) */
+  --brand:       213 20 20;   /* #d51414 — rojo legible sobre claro */
+  --brand-rgb:   237 47 47;
+  --gold:        200 147 10;  /* #c8930a — oro legible sobre claro */
+  --gold-rgb:    232 185 35;
+  --win:          22 163 74;  /* #16a34a — verde legible sobre claro */
+  --win-rgb:      31 214 95;
+
+  /* legacy (juegos — no tocar) */
   --casino-primary: #c0000a;
   --casino-primary-dark: #7f0000;
   --casino-felt: #0d3b2e;
 }
 
+.dark {
+  /* ── Modo NOCTURNO · Carbón Premium ── */
+  --bg:         18 16 22;   /* #121016 */
+  --surface:    27 24 32;   /* #1b1820 */
+  --surface-2:  38 34 48;   /* #262230 */
+  --surface-3:  50 45 62;   /* #322d3e — hover / elevado */
+  --line:       54 49 63;   /* #36313f */
+  --line-2:     74 67 88;   /* #4a4358 */
+  --fg:        245 242 247;
+  --fg-muted:  179 171 189;
+  --fg-subtle: 128 120 140;
+
+  /* Acentos brillantes para fondo oscuro */
+  --brand:     237 47 47;   /* #ed2f2f */
+  --gold:      232 185 35;  /* #e8b923 */
+  --win:        31 214 95;  /* #1fd65f */
+}
+
 * { box-sizing: border-box; }
 
 html, body {
-  background-color: var(--surface-soft);
-  color: #181013;
+  background-color: rgb(var(--bg));
+  color: rgb(var(--fg));
   font-family: var(--font-sans), system-ui, -apple-system, 'Segoe UI', sans-serif;
   min-height: 100vh;
   margin: 0;
@@ -28,62 +65,100 @@ html, body {
   text-rendering: optimizeLegibility;
 }
 
+::selection { background: rgb(var(--brand) / 0.28); color: rgb(var(--fg)); }
+
 /* Safe-area helpers (mobile bottom nav / notches) */
 .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 .pt-safe { padding-top: env(safe-area-inset-top); }
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(192,0,10,0.35); border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(192,0,10,0.55); }
+::-webkit-scrollbar-thumb { background: rgb(var(--line-2)); border-radius: 99px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--brand) / 0.6); background-clip: padding-box; }
 
-/* ─────────────── Design-system utilities (Rojo Argentino Pro) ─────────────── */
+/* ═══════════════════ Design-system utilities ═══════════════════ */
 
-/* Texto con degradé de marca */
+/* Texto con degradé */
 .text-gradient-brand {
-  background: linear-gradient(135deg, #ed2f2f, #ff9b9b);
-  -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent;
+  background: linear-gradient(135deg, #ff5a5a, #ed2f2f 55%, #b00000);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
 }
 .text-gradient-gold {
-  background: linear-gradient(135deg, #c8930a, #ffe788);
-  -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent;
+  background: linear-gradient(135deg, #ffe9a8, #e8b923 55%, #c8930a);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.text-gradient-win {
+  background: linear-gradient(135deg, #6bf3a0, #1fd65f 60%, #12a049);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
 }
 
-/* Glass premium claro y oscuro */
+/* Hairline dorada SUTIL (borde premium discreto) */
+.hairline-gold { box-shadow: inset 0 0 0 1px rgb(var(--gold) / 0.18); }
+.hairline-top-gold { box-shadow: inset 0 1px 0 0 rgb(var(--gold) / 0.22); }
+
+/* Top-highlight sutil para dar volumen a las cards en dark */
+.sheen-top { box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.05); }
+
+/* Glows (suaves, no neón) */
+.glow-brand { box-shadow: 0 12px 40px -14px rgb(var(--brand) / 0.55); }
+.glow-gold  { box-shadow: 0 10px 34px -16px rgb(var(--gold) / 0.30); } /* oro = sutil */
+.glow-win   { box-shadow: 0 12px 40px -14px rgb(var(--win) / 0.45); }
+
+/* Glass premium claro/oscuro */
 .glass {
-  background: rgba(255,255,255,0.92);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(192,0,10,0.12);
+  background: rgb(var(--surface) / 0.72);
+  backdrop-filter: blur(16px) saturate(1.2);
+  border: 1px solid rgb(var(--line) / 0.8);
 }
 .glass-dark {
-  background: rgba(20,10,16,0.55);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(20, 17, 24, 0.6);
+  backdrop-filter: blur(16px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
-/* legacy aliases */
+/* legacy aliases (compat) */
 .glass-card { background: rgba(255,255,255,0.92); backdrop-filter: blur(10px); border: 1px solid rgba(192,0,10,0.2); border-radius: 16px; box-shadow: 0 4px 24px rgba(192,0,10,0.08); }
 .glass-card-dark { background: rgba(26,0,0,0.65); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; }
 
-/* Patrón de puntos suave para fondos */
+/* Fondo ambiente: glows radiales rojo + tenue oro, anclados arriba */
+.ambient {
+  background-image:
+    radial-gradient(720px 420px at 12% -8%,  rgb(var(--brand) / 0.16), transparent 60%),
+    radial-gradient(640px 420px at 92% -4%,  rgb(var(--gold)  / 0.07), transparent 55%);
+  background-repeat: no-repeat;
+}
+.ambient-win {
+  background-image:
+    radial-gradient(720px 420px at 12% -8%,  rgb(var(--win)   / 0.14), transparent 60%),
+    radial-gradient(640px 420px at 92% -4%,  rgb(var(--gold)  / 0.06), transparent 55%);
+  background-repeat: no-repeat;
+}
+
+/* Patrón de puntos suave */
 .bg-dots { background-image: radial-gradient(circle, rgba(255,255,255,0.10) 1px, transparent 1px); background-size: 22px 22px; }
+/* Grano fino para superar el "plano" del dark */
+.bg-grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+}
 
 /* Skeleton shimmer */
-.skeleton { position: relative; overflow: hidden; background: rgba(192,0,10,0.06); }
+.skeleton { position: relative; overflow: hidden; background: rgb(var(--surface-2)); }
 .skeleton::after {
   content: ''; position: absolute; inset: 0; transform: translateX(-100%);
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.08), transparent);
   animation: shimmer 1.6s infinite;
 }
 @keyframes shimmer { 100% { transform: translateX(100%); } }
 
-/* Esconder scrollbar en carruseles */
+/* Number ticker / cuenta sutil */
+@keyframes countUp { from { opacity: 0; transform: translateY(0.25em); } to { opacity: 1; transform: translateY(0); } }
+.animate-count { animation: countUp 0.5s cubic-bezier(0.16,1,0.3,1) both; }
+
+/* Carruseles */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* ─────────────── Clases de juego (preservadas; rediseño gradual) ─────────────── */
+/* ═══════════════════ Clases de juego (legacy, preservadas) ═══════════════════ */
 
 .card-face {
   background: white; border-radius: 6px; border: 1px solid #ddd;

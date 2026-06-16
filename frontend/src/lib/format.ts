@@ -56,3 +56,33 @@ export function formatDateTime(iso: string | null | undefined): string {
     day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit',
   });
 }
+
+/** Solo dígitos. */
+export function onlyDigits(s: string | null | undefined): string {
+  return (s ?? '').replace(/\D/g, '');
+}
+
+/** CUIT/CUIL válido = 11 dígitos. */
+export function isValidCuit(raw: string | null | undefined): boolean {
+  return onlyDigits(raw).length === 11;
+}
+
+/** Formatea CUIT como XX-XXXXXXXX-X mientras se tipea. */
+export function formatCuit(raw: string | null | undefined): string {
+  const d = onlyDigits(raw).slice(0, 11);
+  if (d.length <= 2) return d;
+  if (d.length <= 10) return `${d.slice(0, 2)}-${d.slice(2)}`;
+  return `${d.slice(0, 2)}-${d.slice(2, 10)}-${d.slice(10)}`;
+}
+
+/** Edad en años a partir de una fecha ISO (YYYY-MM-DD). */
+export function ageFromISO(iso: string | null | undefined): number {
+  if (!iso) return 0;
+  const b = new Date(iso);
+  if (isNaN(b.getTime())) return 0;
+  const now = new Date();
+  let age = now.getFullYear() - b.getFullYear();
+  const m = now.getMonth() - b.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--;
+  return age;
+}

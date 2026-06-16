@@ -5,8 +5,8 @@ import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import {
-  Avatar, Badge, Button, Card, CardTitle, EmptyState, Input, Money,
-  Skeleton, SkeletonRows, StatCard, StatusBadge,
+  Avatar, Badge, Button, Card, CardTitle, Donut, EmptyState, Icon, Input, Money,
+  SectionHeader, Skeleton, SkeletonRows, StatCard, StatusBadge,
 } from '@/components/ui';
 import { displayPhone, timeAgo } from '@/lib/format';
 import type { CashierAccount, Profile, Transaction } from '@/types/database';
@@ -96,96 +96,204 @@ export default function CajeroHomePage() {
     [players],
   );
 
+  const floatBalance = Number(account?.float_balance ?? 0);
+  const cashOnHand = Number(account?.cash_on_hand ?? 0);
+  const liquidity = floatBalance + cashOnHand;
+  const loadedToday = today?.loaded ?? 0;
+  const withdrawnToday = today?.withdrawn ?? 0;
+  const dayVolume = loadedToday + withdrawnToday;
+  const netToday = loadedToday - withdrawnToday;
+
   return (
-    <div className="space-y-6">
-      <header className="flex items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-extrabold text-brand-900">Mi caja</h1>
-          <p className="text-sm text-gray-400">Tu float, tus jugadores y el movimiento del día.</p>
-        </div>
-        <Button variant="subtle" size="sm" onClick={loadAll} leftIcon={<span>↻</span>}>
-          Actualizar
-        </Button>
-      </header>
+    <div className="ambient space-y-6 animate-fade-up">
+      <SectionHeader
+        eyebrow="Mi caja"
+        title="Tu caja de hoy"
+        subtitle="Tu float, tus jugadores y el movimiento del día."
+        action={
+          <Button variant="subtle" size="sm" onClick={loadAll} leftIcon={<Icon name="refresh" size={16} />}>
+            Actualizar
+          </Button>
+        }
+      />
 
       {/* ─── STATS ─── */}
       {loading ? (
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24" />)}
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28" />)}
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <StatCard
             tone="brand"
             label="Float disponible"
-            icon="🏦"
-            value={<Money value={account?.float_balance ?? 0} />}
+            icon={<Icon name="chip" size={18} />}
+            value={<Money value={floatBalance} />}
             hint="Fichas que podés cargar"
           />
           <StatCard
             tone="gold"
             label="Efectivo en mano"
-            icon="💵"
-            value={<Money value={account?.cash_on_hand ?? 0} showChip={false} />}
+            icon={<Icon name="wallet" size={18} />}
+            value={<Money value={cashOnHand} showChip={false} />}
             hint="Plata física en tu poder"
           />
           <StatCard
             tone="green"
             label="Cargado hoy"
-            icon="⬆️"
-            value={<Money value={today?.loaded ?? 0} />}
+            icon={<Icon name="plus" size={18} />}
+            value={<Money value={loadedToday} />}
             hint="Total de cargas del día"
           />
           <StatCard
             tone="red"
             label="Retirado hoy"
-            icon="⬇️"
-            value={<Money value={today?.withdrawn ?? 0} />}
+            icon={<Icon name="minus" size={18} />}
+            value={<Money value={withdrawnToday} />}
             hint="Total de pagos del día"
           />
         </div>
       )}
 
+      {/* ─── LIQUIDEZ + MOVIMIENTO DEL DÍA (datos reales) ─── */}
+      {!loading && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Composición de tu liquidez: float vs efectivo */}
+          <Card accent="gold">
+            <CardTitle
+              icon={<Icon name="coins" size={20} />}
+              title="Composición de tu caja"
+              subtitle="Fichas (float) frente al efectivo físico"
+              accent="gold"
+            />
+            <div className="flex items-center gap-5">
+              <Donut
+                size={104}
+                stroke={13}
+                segments={[
+                  { value: floatBalance, color: 'brand' },
+                  { value: cashOnHand, color: 'gold' },
+                ]}
+              >
+                <div className="leading-none">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-fg-subtle">Total</div>
+                  <div className="font-display text-sm font-extrabold text-fg">
+                    <Money value={liquidity} compact />
+                  </div>
+                </div>
+              </Donut>
+              <ul className="min-w-0 flex-1 space-y-2.5">
+                <li className="flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-2 text-sm text-fg-muted">
+                    <span className="h-2.5 w-2.5 rounded-full bg-brand-500" /> Float (fichas)
+                  </span>
+                  <Money value={floatBalance} compact className="font-bold text-fg" />
+                </li>
+                <li className="flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-2 text-sm text-fg-muted">
+                    <span className="h-2.5 w-2.5 rounded-full bg-gold-500" /> Efectivo en mano
+                  </span>
+                  <Money value={cashOnHand} compact showChip={false} className="font-bold text-fg" />
+                </li>
+              </ul>
+            </div>
+          </Card>
+
+          {/* Movimiento del día: cargas vs retiros */}
+          <Card>
+            <CardTitle
+              icon={<Icon name="refresh" size={20} />}
+              title="Movimiento del día"
+              subtitle="Cargas y retiros procesados hoy"
+              accent="win"
+            />
+            {dayVolume === 0 ? (
+              <div className="flex items-center gap-3 rounded-2xl border border-line bg-surface-2/50 px-4 py-5 text-sm text-fg-muted">
+                <Icon name="calendar" size={18} className="text-fg-subtle" />
+                Todavía no registraste movimientos hoy.
+              </div>
+            ) : (
+              <div className="flex items-center gap-5">
+                <Donut
+                  size={104}
+                  stroke={13}
+                  segments={[
+                    { value: loadedToday, color: 'win' },
+                    { value: withdrawnToday, color: 'brand' },
+                  ]}
+                >
+                  <div className="leading-none">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-fg-subtle">Neto</div>
+                    <div className={`font-display text-sm font-extrabold ${netToday >= 0 ? 'text-win-600 dark:text-win-400' : 'text-fg'}`}>
+                      <Money value={Math.abs(netToday)} compact />
+                    </div>
+                  </div>
+                </Donut>
+                <ul className="min-w-0 flex-1 space-y-2.5">
+                  <li className="flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-2 text-sm text-fg-muted">
+                      <span className="h-2.5 w-2.5 rounded-full bg-win-500" /> Cargado
+                    </span>
+                    <Money value={loadedToday} compact className="font-bold text-win-600 dark:text-win-400" />
+                  </li>
+                  <li className="flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-2 text-sm text-fg-muted">
+                      <span className="h-2.5 w-2.5 rounded-full bg-brand-500" /> Retirado
+                    </span>
+                    <Money value={withdrawnToday} compact className="font-bold text-brand-500" />
+                  </li>
+                </ul>
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
+
       {/* ─── ACTIVAR JUGADOR ─── */}
-      <Card>
+      <Card accent="brand">
         <CardTitle
-          icon="✨"
+          icon={<Icon name="sparkles" size={20} />}
           title="Activar jugador"
           subtitle="Buscá un jugador pendiente por teléfono o alias y reclamálo"
+          accent="brand"
         />
         <Input
-          leftIcon={<span>🔎</span>}
+          leftIcon={<Icon name="search" size={18} />}
           placeholder="Teléfono o alias…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
         <div className="mt-4">
           {!query.trim() ? (
-            <p className="px-1 text-sm text-gray-400">Escribí para buscar jugadores pendientes.</p>
+            <div className="flex items-center gap-3 rounded-2xl border border-dashed border-line bg-surface-2/40 px-4 py-4 text-sm text-fg-muted">
+              <Icon name="search" size={18} className="shrink-0 text-fg-subtle" />
+              Escribí un teléfono o alias para buscar jugadores pendientes.
+            </div>
           ) : searching ? (
             <SkeletonRows rows={2} />
           ) : pending.length === 0 ? (
-            <EmptyState icon="🔍" title="Sin resultados" subtitle="No hay jugadores pendientes con ese dato." />
+            <EmptyState icon={<Icon name="search" size={36} />} title="Sin resultados" subtitle="No hay jugadores pendientes con ese dato." />
           ) : (
             <ul className="space-y-2.5">
               {pending.map((p) => (
                 <li
                   key={p.id}
-                  className="flex items-center gap-3 rounded-2xl border border-brand-100 bg-white p-3"
+                  className="flex items-center gap-3 rounded-2xl border border-line bg-surface-2/50 p-3 transition-colors hover:bg-surface-2 animate-fade-in"
                 >
                   <Avatar alias={p.alias} size={40} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="truncate font-bold text-brand-900">{p.alias}</span>
+                      <span className="truncate font-bold text-fg">{p.alias}</span>
                       <StatusBadge status={p.status} />
                     </div>
-                    <p className="truncate text-xs text-gray-400">{displayPhone(p.phone)}</p>
+                    <p className="truncate text-xs text-fg-muted">{displayPhone(p.phone)}</p>
                   </div>
                   <Button
-                    variant="gold"
+                    variant="primary"
                     size="sm"
                     loading={activatingId === p.id}
                     onClick={() => handleActivate(p)}
+                    leftIcon={<Icon name="check" size={15} />}
                   >
                     Activar
                   </Button>
@@ -199,7 +307,7 @@ export default function CajeroHomePage() {
       {/* ─── MIS JUGADORES ─── */}
       <Card>
         <CardTitle
-          icon="🎮"
+          icon={<Icon name="users" size={20} />}
           title="Mis jugadores"
           subtitle={loading ? undefined : `${players.length} en cartera`}
           action={
@@ -214,37 +322,39 @@ export default function CajeroHomePage() {
           <SkeletonRows rows={4} />
         ) : players.length === 0 ? (
           <EmptyState
-            icon="🫥"
+            icon={<Icon name="users" size={36} />}
             title="Todavía no tenés jugadores"
             subtitle="Activá un jugador pendiente para sumarlo a tu cartera."
           />
         ) : (
-          <ul className="space-y-2.5">
+          <ul className="grid gap-2.5 sm:grid-cols-2">
             {players.map((p) => (
               <li
                 key={p.id}
-                className="flex items-center gap-3 rounded-2xl border border-brand-100 bg-white p-3 transition-colors hover:bg-brand-50/40"
+                className="group flex flex-col gap-3 rounded-2xl border border-line bg-surface-2/40 p-3.5 transition-all hover:-translate-y-0.5 hover:border-line-2 hover:bg-surface-2 hover:shadow-card"
               >
-                <Avatar alias={p.alias} size={42} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate font-bold text-brand-900">{p.alias}</span>
-                    <StatusBadge status={p.status} />
+                <div className="flex items-center gap-3">
+                  <Avatar alias={p.alias} size={42} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate font-bold text-fg">{p.alias}</span>
+                      <StatusBadge status={p.status} />
+                    </div>
+                    <p className="truncate text-xs text-fg-muted">
+                      {displayPhone(p.phone)} · alta {timeAgo(p.created_at)}
+                    </p>
                   </div>
-                  <p className="truncate text-xs text-gray-400">
-                    {displayPhone(p.phone)} · alta {timeAgo(p.created_at)}
-                  </p>
+                  <div className="shrink-0 text-right">
+                    <p className="text-[10px] uppercase tracking-wider text-fg-subtle">Saldo</p>
+                    <Money value={p.balance} compact className="font-display font-extrabold text-fg" />
+                  </div>
                 </div>
-                <div className="hidden text-right sm:block">
-                  <p className="text-[11px] uppercase tracking-wider text-gray-400">Saldo</p>
-                  <Money value={p.balance} className="text-brand-900" />
-                </div>
-                <div className="flex shrink-0 gap-1.5">
-                  <Link href={`/cajero/cargar?player=${p.id}`}>
-                    <Button variant="primary" size="sm">Cargar</Button>
+                <div className="flex gap-2">
+                  <Link href={`/cajero/cargar?player=${p.id}`} className="flex-1">
+                    <Button variant="primary" size="sm" fullWidth leftIcon={<Icon name="plus" size={15} />}>Cargar</Button>
                   </Link>
-                  <Link href={`/cajero/retirar?player=${p.id}`}>
-                    <Button variant="outline" size="sm">Retirar</Button>
+                  <Link href={`/cajero/retirar?player=${p.id}`} className="flex-1">
+                    <Button variant="outline" size="sm" fullWidth leftIcon={<Icon name="minus" size={15} />}>Retirar</Button>
                   </Link>
                 </div>
               </li>

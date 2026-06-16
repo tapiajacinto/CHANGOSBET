@@ -2,10 +2,19 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import { toE164 } from '@/lib/format';
 import type { Profile, UserRole, UserStatus } from '@/types/database';
 
 interface AuthUser { id: string; alias: string } // compat con RoomContext
+
+export interface RegisterInput {
+  first_name: string;
+  last_name: string;
+  phone: string;
+  email: string;
+  cuit: string;
+  birth_date: string; // YYYY-MM-DD
+  password: string;
+}
 
 interface AuthContextType {
   loading: boolean;
@@ -18,8 +27,8 @@ interface AuthContextType {
   isCashier: boolean;
   isActive: boolean;
   isPending: boolean;
-  register: (p: { alias: string; phone: string; password: string }) => Promise<{ error?: string }>;
-  login: (p: { phone: string; password: string }) => Promise<{ error?: string }>;
+  register: (p: RegisterInput) => Promise<{ error?: string }>;
+  login: (p: { email: string; password: string }) => Promise<{ error?: string }>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -37,9 +46,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const profileChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const fetchProfile = useCallback(async (uid: string) => {
-    const { data } = await supabase.from('profiles').select('*').eq('id', uid).single();
-    if (data) setProfile(data as Profile);
-    return data as Profile | null;
+    try {
+      const { data } = await supabase.from('profiles').select('*').eq('id', uid).maybeSingle();
+      if (data) setProfile(data as Profile);
+      return (data as Profile) ?? null;
+    } catch {
+      return null;
+    }
   }, []);
 
   // Suscripción Realtime a la propia fila de profiles (balance/estado en vivo).
@@ -55,30 +68,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    let mounted = true;
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!mounted) return;
-      setSession(data.session);
-      if (data.session?.user) {
-        await fetchProfile(data.session.user.id);
-        subscribeProfile(data.session.user.id);
-      }
-      setLoading(false);
-    });
+    let done = false;
+    const finishLoading = () => { if (!done) { done = true; setLoading(false); } };
 
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, s) => {
+    // Red de seguridad: nunca quedarse colgado en "Cargando…" pase lo que pase.
+    const safety = setTimeout(finishLoading, 4000);
+
+    // onAuthStateChange emite INITIAL_SESSION al instante con la sesión guardada
+    // (sin depender de getSession(), que puede colgarse por el navigator lock).
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
       if (s?.user) {
-        await fetchProfile(s.user.id);
+        void fetchProfile(s.user.id);          // en segundo plano, no bloquea
         subscribeProfile(s.user.id);
       } else {
         setProfile(null);
         if (profileChannelRef.current) { supabase.removeChannel(profileChannelRef.current); profileChannelRef.current = null; }
       }
+      finishLoading();
     });
 
+    // Respaldo: si por algún motivo no llega INITIAL_SESSION, liberamos igual.
+    supabase.auth.getSession()
+      .then(({ data }) => {
+        setSession(prev => prev ?? data.session);
+        if (data.session?.user) void fetchProfile(data.session.user.id);
+        finishLoading();
+      })
+      .catch(finishLoading);
+
     return () => {
-      mounted = false;
+      clearTimeout(safety);
       sub.subscription.unsubscribe();
       if (profileChannelRef.current) supabase.removeChannel(profileChannelRef.current);
     };
@@ -92,22 +112,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [session, fetchProfile]);
 
-  const register = useCallback(async ({ alias, phone, password }: { alias: string; phone: string; password: string }) => {
-    const e164 = toE164(phone);
-    const { data, error } = await supabase.auth.signUp({
-      phone: e164, password, options: { data: { alias: alias.trim() } },
-    });
-    if (error) return { error: traducirError(error.message) };
-    // Con "Confirm phone" desactivado ya hay sesión; si no, intentamos login directo.
-    if (!data.session) {
-      const { error: e2 } = await supabase.auth.signInWithPassword({ phone: e164, password });
-      if (e2) return { error: traducirError(e2.message) };
+  const register = useCallback(async (p: RegisterInput) => {
+    // 1) Crear la cuenta (confirmada) en el servidor con la service-role key.
+    let res: Response;
+    try {
+      res = await fetch('/api/register', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p),
+      });
+    } catch {
+      return { error: 'No se pudo conectar con el servidor.' };
     }
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) return { error: (json as { error?: string }).error ?? 'No se pudo crear la cuenta.' };
+
+    // 2) Iniciar sesión con email + contraseña.
+    const { error } = await supabase.auth.signInWithPassword({ email: p.email.trim().toLowerCase(), password: p.password });
+    if (error) return { error: traducirError(error.message) };
     return {};
   }, []);
 
-  const login = useCallback(async ({ phone, password }: { phone: string; password: string }) => {
-    const { error } = await supabase.auth.signInWithPassword({ phone: toE164(phone), password });
+  const login = useCallback(async ({ email, password }: { email: string; password: string }) => {
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
     if (error) return { error: traducirError(error.message) };
     return {};
   }, []);
@@ -137,10 +162,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 function traducirError(msg: string): string {
   const m = msg.toLowerCase();
-  if (m.includes('invalid login') || m.includes('credentials')) return 'Teléfono o contraseña incorrectos.';
-  if (m.includes('already registered') || m.includes('already exists')) return 'Ese teléfono ya está registrado. Iniciá sesión.';
+  if (m.includes('invalid login') || m.includes('credentials')) return 'Email o contraseña incorrectos.';
+  if (m.includes('already registered') || m.includes('already exists')) return 'Ese email ya está registrado. Iniciá sesión.';
   if (m.includes('password')) return 'La contraseña debe tener al menos 6 caracteres.';
-  if (m.includes('phone')) return 'Revisá el número de teléfono.';
+  if (m.includes('email')) return 'Revisá el email.';
   if (m.includes('not confirmed')) return 'Tu cuenta necesita confirmación. Contactá a un cajero.';
   return 'Ocurrió un error. Probá de nuevo.';
 }

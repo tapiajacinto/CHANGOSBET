@@ -9,17 +9,17 @@ import { PlayerShell } from '@/components/player/PlayerShell';
 import { PendingNotice } from '@/components/player/PendingNotice';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRoom } from '@/contexts/RoomContext';
-import { Card, Money, Input, Button, Tabs } from '@/components/ui';
-import { cn } from '@/lib/cn';
+import { BalanceHero, Card, Input, Button, Tabs, Icon, GameCard, StatusBadge, SectionHeader } from '@/components/ui';
+import type { IconName } from '@/components/ui';
 import type { GameType } from '@/types';
 
 /* ─── Catálogo de juegos ─────────────────────────────────────────── */
-const GAMES: { id: GameType; name: string; icon: string; soon?: boolean }[] = [
-  { id: 'roulette',  name: 'Ruleta',    icon: '🎡' },
-  { id: 'blackjack', name: 'Blackjack', icon: '🃏' },
-  { id: 'poker',     name: 'Poker',     icon: '♠️', soon: true },
-  { id: 'horses',    name: 'Caballos',  icon: '🏇' },
-  { id: 'football',  name: 'Fútbol',    icon: '⚽' },
+const GAMES: { id: GameType; name: string; icon: IconName; image: string; soon?: boolean }[] = [
+  { id: 'roulette',  name: 'Ruleta',    icon: 'roulette', image: '/games/roulette.webp' },
+  { id: 'blackjack', name: 'Blackjack', icon: 'cards',    image: '/games/blackjack.webp' },
+  { id: 'poker',     name: 'Poker',     icon: 'spade',    image: '/games/poker.webp', soon: true },
+  { id: 'horses',    name: 'Caballos',  icon: 'horse',    image: '/games/caballos.webp' },
+  { id: 'football',  name: 'Fútbol',    icon: 'ball',     image: '/games/futbol.webp' },
 ];
 
 function LobbyContent() {
@@ -73,8 +73,8 @@ function LobbyContent() {
   /* ── Cuenta pendiente / bloqueada: sin acciones de juego ── */
   if (!isActive) {
     return (
-      <div className="space-y-5">
-        <Balance value={balance} />
+      <div className="ambient animate-fade-up space-y-5">
+        <Balance value={balance} status={profile?.status} active={false} />
         <PendingNotice />
       </div>
     );
@@ -82,82 +82,73 @@ function LobbyContent() {
 
   /* ── Jugador activo ── */
   return (
-    <div className="space-y-6">
-      <Balance value={balance} />
+    <div className="ambient animate-fade-up space-y-6">
+      <Balance value={balance} status={profile?.status} active />
 
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="font-display text-xl font-extrabold text-brand-900">Jugá con los changos</h1>
-        <Tabs
-          value={tab}
-          onChange={setTab}
-          options={[
-            { value: 'crear', label: 'Crear' },
-            { value: 'unirse', label: 'Unirse' },
-          ]}
-        />
-      </div>
+      <SectionHeader
+        eyebrow="Lobby"
+        title="Jugá con los changos"
+        action={
+          <Tabs
+            value={tab}
+            onChange={setTab}
+            options={[
+              { value: 'crear', label: 'Crear' },
+              { value: 'unirse', label: 'Unirse' },
+            ]}
+          />
+        }
+      />
 
       {tab === 'crear' ? (
         <motion.div
           key="crear"
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
+          className="space-y-5"
         >
-          <Card className="space-y-5">
-            <Input
-              label="Nombre de la mesa"
-              placeholder={`Mesa de ${profile?.alias ?? 'changos'}`}
-              value={roomName}
-              onChange={(e) => setRoomName(e.target.value)}
-              maxLength={28}
-            />
+          <Input
+            label="Nombre de la mesa"
+            placeholder={`Mesa de ${profile?.alias ?? 'changos'}`}
+            value={roomName}
+            onChange={(e) => setRoomName(e.target.value)}
+            maxLength={28}
+          />
 
-            <div>
-              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-brand-700">Elegí el juego</p>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {GAMES.map((g) => {
-                  const active = picked === g.id;
-                  return (
-                    <button
-                      key={g.id}
-                      type="button"
-                      disabled={g.soon}
-                      onClick={() => setPicked(g.id)}
-                      className={cn(
-                        'relative flex flex-col items-center gap-2 rounded-3xl border-2 p-4 transition-all',
-                        g.soon
-                          ? 'cursor-not-allowed border-brand-100 bg-brand-50/40 opacity-60'
-                          : active
-                            ? 'border-brand-500 bg-brand-50 shadow-brand'
-                            : 'border-brand-100 bg-white hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-card',
-                      )}
-                    >
-                      {g.soon && (
-                        <span className="absolute right-1.5 top-1.5 rounded-full bg-gold-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-gold-700">
-                          Pronto
-                        </span>
-                      )}
-                      <span className={cn('text-3xl transition-transform', active && 'scale-110')}>{g.icon}</span>
-                      <span className="font-display text-sm font-bold text-brand-900">{g.name}</span>
-                      {active && (
-                        <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-brand-gradient text-[10px] text-white shadow-brand">
-                          ✓
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+          <div>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <p className="text-xs font-bold uppercase tracking-wider text-fg-muted">Elegí el juego</p>
+              {picked && (
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-win-600 dark:text-win-400">
+                  <Icon name="check" size={14} />
+                  {GAMES.find((g) => g.id === picked)?.name}
+                </span>
+              )}
             </div>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
+              {GAMES.map((g) => (
+                <GameCard
+                  key={g.id}
+                  title={g.name}
+                  image={g.image}
+                  icon={g.icon}
+                  aspect="portrait"
+                  soon={g.soon}
+                  selected={picked === g.id}
+                  onClick={() => setPicked(g.id)}
+                />
+              ))}
+            </div>
+          </div>
 
-            <Button
-              variant="primary" size="lg" fullWidth
-              loading={creating}
-              disabled={!picked}
-              onClick={handleCreate}
-            >
-              Crear mesa →
-            </Button>
-          </Card>
+          <Button
+            variant="primary" size="lg" fullWidth
+            loading={creating}
+            disabled={!picked}
+            onClick={handleCreate}
+            rightIcon={<Icon name="arrowRight" size={18} />}
+          >
+            Crear mesa
+          </Button>
         </motion.div>
       ) : (
         <motion.div
@@ -166,10 +157,10 @@ function LobbyContent() {
         >
           <Card className="space-y-5">
             <div className="text-center">
-              <div className="mx-auto grid h-14 w-14 place-items-center rounded-3xl bg-brand-gradient text-2xl text-white shadow-brand">
-                🔑
+              <div className="mx-auto grid h-14 w-14 place-items-center rounded-3xl bg-brand-gradient text-white shadow-brand">
+                <Icon name="users" size={26} />
               </div>
-              <p className="mt-3 text-sm text-gray-600">
+              <p className="mt-3 text-sm text-fg-muted">
                 Pedile el código de la mesa a tu chango y entrá a jugar.
               </p>
             </div>
@@ -190,8 +181,9 @@ function LobbyContent() {
               loading={joining}
               disabled={code.trim().length !== 6}
               onClick={handleJoin}
+              rightIcon={<Icon name="arrowRight" size={18} />}
             >
-              Entrar a la mesa →
+              Entrar a la mesa
             </Button>
           </Card>
         </motion.div>
@@ -200,19 +192,20 @@ function LobbyContent() {
   );
 }
 
-/* ── Tarjeta de balance prominente ── */
-function Balance({ value }: { value: number }) {
+/* ── Saldo prominente (BalanceHero premium) ── */
+function Balance({ value, status, active }: { value: number; status?: string; active: boolean }) {
   return (
-    <Card className="relative overflow-hidden !border-brand-800 !bg-brand-gradient text-white">
-      <div className="absolute inset-0 bg-dots opacity-30" />
-      <div className="relative flex items-center justify-between">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-white/70">Tu saldo</p>
-          <Money value={value} className="!font-display text-3xl !font-extrabold" />
-        </div>
-        <span className="text-4xl drop-shadow">🪙</span>
-      </div>
-    </Card>
+    <BalanceHero
+      value={value}
+      caption={active ? 'Listo para jugar con los changos' : 'Esperando que un cajero active tu cuenta'}
+      badge={
+        status === 'active'
+          ? <StatusBadge status="active" />
+          : status === 'blocked'
+            ? <StatusBadge status="blocked" />
+            : <StatusBadge status="pending" />
+      }
+    />
   );
 }
 

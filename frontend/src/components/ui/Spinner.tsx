@@ -1,5 +1,6 @@
 'use client';
 import { cn } from '@/lib/cn';
+import { Icon } from './Icon';
 
 export function Spinner({ className, size = 24 }: { className?: string; size?: number }) {
   return (
@@ -12,10 +13,10 @@ export function Spinner({ className, size = 24 }: { className?: string; size?: n
 
 export function FullScreenLoader({ label = 'Cargando…' }: { label?: string }) {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-surface-soft">
-      <div className="text-4xl animate-float">🃏</div>
-      <Spinner size={32} />
-      <p className="text-sm font-medium text-brand-700">{label}</p>
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-bg text-fg">
+      <div className="animate-float text-gold-500"><Icon name="chip" size={44} /></div>
+      <Spinner size={30} />
+      <p className="text-sm font-medium text-fg-muted">{label}</p>
     </div>
   );
 }

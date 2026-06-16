@@ -2,7 +2,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   Card, Money, Avatar, Badge, StatusBadge, RoleBadge, Button,
-  Modal, ConfirmDialog, AmountInput, Input, Skeleton, SkeletonRows, EmptyState,
+  Modal, ConfirmDialog, AmountInput, Input, Skeleton, SkeletonRows, EmptyState, Icon,
+  StatCard, SectionHeader,
 } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { displayPhone, timeAgo } from '@/lib/format';
@@ -10,9 +11,14 @@ import { cn } from '@/lib/cn';
 import type { Profile, Transaction, TxnType } from '@/types/database';
 import toast from 'react-hot-toast';
 
-const TXN_LABEL: Record<TxnType, string> = {
-  cashier_load: 'Carga', cashier_withdraw: 'Retiro', bet: 'Apuesta',
-  win: 'Ganancia', float_assign: 'Float', adjustment: 'Ajuste', settlement: 'Cierre',
+const TXN_META: Record<TxnType, { label: string; tone: 'green' | 'red' | 'brand' | 'amber' | 'gold' | 'blue' | 'gray' }> = {
+  cashier_load:     { label: 'Carga',    tone: 'green' },
+  cashier_withdraw: { label: 'Retiro',   tone: 'red'   },
+  bet:              { label: 'Apuesta',  tone: 'amber' },
+  win:              { label: 'Ganancia', tone: 'gold'  },
+  float_assign:     { label: 'Float',    tone: 'blue'  },
+  adjustment:       { label: 'Ajuste',   tone: 'brand' },
+  settlement:       { label: 'Cierre',   tone: 'gray'  },
 };
 
 interface PlayerRow extends Profile {
@@ -104,25 +110,42 @@ export default function AdminJugadoresPage() {
     setHist((data as Transaction[]) ?? []);
   };
 
+  // ─── Resumen real (sobre el set cargado) ───
+  const totalBalance = rows.reduce((s, p) => s + Number(p.balance ?? 0), 0);
+  const activeCount = rows.filter((p) => p.status === 'active').length;
+  const blockedCount = rows.filter((p) => p.status === 'blocked').length;
+
   return (
     <div className="space-y-6 animate-fade-up">
-      <div>
-        <h2 className="font-display text-2xl font-extrabold text-brand-900">Jugadores</h2>
-        <p className="text-sm text-gray-400">Buscá, ajustá saldos y administrá usuarios.</p>
-      </div>
+      <SectionHeader
+        eyebrow="Administración"
+        title="Jugadores"
+        subtitle="Buscá, ajustá saldos y administrá usuarios."
+      />
+
+      {/* Resumen */}
+      {!loading && rows.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatCard label="Usuarios" icon={<Icon name="users" size={18} />} value={rows.length} hint="En la vista actual" />
+          <StatCard tone="green" label="Activos" icon={<Icon name="check" size={18} />} value={activeCount} />
+          <StatCard tone="red" label="Bloqueados" icon={<Icon name="x" size={18} />} value={blockedCount} />
+          <StatCard tone="gold" label="Saldo total" icon={<Icon name="chip" size={18} />}
+            value={<Money value={totalBalance} compact showChip={false} />} />
+        </div>
+      )}
 
       {/* Search */}
-      <div className="flex items-end gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
         <Input
           label="Buscar"
           placeholder="Teléfono o alias"
-          leftIcon="🔍"
+          leftIcon={<Icon name="search" size={18} />}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && load(query)}
           className="flex-1"
         />
-        <Button onClick={() => load(query)} loading={loading} className="shrink-0">Buscar</Button>
+        <Button onClick={() => load(query)} loading={loading} className="shrink-0" leftIcon={<Icon name="search" size={16} />}>Buscar</Button>
         {query && (
           <Button variant="ghost" onClick={() => { setQuery(''); load(); }} className="shrink-0">Limpiar</Button>
         )}
@@ -132,14 +155,14 @@ export default function AdminJugadoresPage() {
       {loading ? (
         <Card><SkeletonRows rows={6} /></Card>
       ) : rows.length === 0 ? (
-        <EmptyState icon="🔍" title="Sin resultados" subtitle="Probá con otro alias o teléfono." />
+        <EmptyState icon={<Icon name="search" size={36} />} title="Sin resultados" subtitle="Probá con otro alias o teléfono." />
       ) : (
         <Card padded={false} className="overflow-hidden">
           {/* Desktop table */}
           <div className="hidden md:block">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-brand-50 text-left text-[11px] font-bold uppercase tracking-wider text-gray-400">
+                <tr className="border-b border-line text-left text-[11px] font-bold uppercase tracking-wider text-fg-subtle">
                   <th className="px-5 py-3">Usuario</th>
                   <th className="px-3 py-3">Teléfono</th>
                   <th className="px-3 py-3">Rol</th>
@@ -149,26 +172,28 @@ export default function AdminJugadoresPage() {
                   <th className="px-5 py-3 text-right">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-brand-50">
+              <tbody className="divide-y divide-line">
                 {rows.map((p) => (
-                  <tr key={p.id} className="hover:bg-brand-50/40">
+                  <tr key={p.id} className="transition-colors hover:bg-surface-2">
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2.5">
                         <Avatar alias={p.alias} size={32} />
-                        <span className="font-bold text-brand-900">{p.alias}</span>
+                        <span className="font-bold text-fg">{p.alias}</span>
                       </div>
                     </td>
-                    <td className="px-3 py-3 text-gray-500">{displayPhone(p.phone)}</td>
+                    <td className="px-3 py-3 text-fg-muted">{displayPhone(p.phone)}</td>
                     <td className="px-3 py-3"><RoleBadge role={p.role} /></td>
                     <td className="px-3 py-3"><StatusBadge status={p.status} /></td>
-                    <td className="px-3 py-3 text-right"><Money value={p.balance} className="text-brand-700" /></td>
-                    <td className="px-3 py-3 text-gray-500">{p.cashier?.alias ?? '—'}</td>
+                    <td className="px-3 py-3 text-right"><Money value={p.balance} className="text-fg" /></td>
+                    <td className="px-3 py-3 text-fg-muted">{p.cashier?.alias ?? '—'}</td>
                     <td className="px-5 py-3">
                       <div className="flex justify-end gap-1.5">
-                        <Button size="sm" variant="ghost" onClick={() => openHistory(p)}>🧾</Button>
-                        <Button size="sm" variant="outline" onClick={() => { setAdjTarget(p); setAdjAmount(0); setAdjReason(''); setAdjRemove(false); }}>± Saldo</Button>
-                        <Button size="sm" variant={p.status === 'blocked' ? 'subtle' : 'danger'} onClick={() => setStatusTarget(p)}>
-                          {p.status === 'blocked' ? '✓' : '⛔'}
+                        <Button size="sm" variant="ghost" onClick={() => openHistory(p)} aria-label="Historial"><Icon name="copy" size={16} /></Button>
+                        <Button size="sm" variant="outline" leftIcon={<Icon name="coins" size={16} />} onClick={() => { setAdjTarget(p); setAdjAmount(0); setAdjReason(''); setAdjRemove(false); }}>
+                          Saldo
+                        </Button>
+                        <Button size="sm" variant={p.status === 'blocked' ? 'subtle' : 'danger'} onClick={() => setStatusTarget(p)} aria-label={p.status === 'blocked' ? 'Reactivar' : 'Bloquear'}>
+                          {p.status === 'blocked' ? <Icon name="check" size={16} /> : <Icon name="x" size={16} />}
                         </Button>
                       </div>
                     </td>
@@ -179,27 +204,29 @@ export default function AdminJugadoresPage() {
           </div>
 
           {/* Mobile cards */}
-          <ul className="divide-y divide-brand-50 md:hidden">
+          <ul className="divide-y divide-line md:hidden">
             {rows.map((p) => (
               <li key={p.id} className="p-4">
                 <div className="flex items-center gap-3">
                   <Avatar alias={p.alias} size={40} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-bold text-brand-900">{p.alias}</p>
-                    <p className="text-xs text-gray-400">{displayPhone(p.phone)}</p>
+                    <p className="truncate font-bold text-fg">{p.alias}</p>
+                    <p className="text-xs text-fg-muted">{displayPhone(p.phone)}</p>
                   </div>
-                  <Money value={p.balance} className="text-brand-700" />
+                  <Money value={p.balance} className="text-fg" />
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <RoleBadge role={p.role} />
                   <StatusBadge status={p.status} />
-                  {p.cashier?.alias && <Badge tone="gray">💵 {p.cashier.alias}</Badge>}
+                  {p.cashier?.alias && <Badge tone="gray"><Icon name="wallet" size={12} /> {p.cashier.alias}</Badge>}
                 </div>
                 <div className="mt-3 flex gap-2">
-                  <Button size="sm" variant="ghost" onClick={() => openHistory(p)}>🧾 Historial</Button>
-                  <Button size="sm" variant="outline" onClick={() => { setAdjTarget(p); setAdjAmount(0); setAdjReason(''); setAdjRemove(false); }}>± Saldo</Button>
+                  <Button size="sm" variant="ghost" onClick={() => openHistory(p)}><Icon name="copy" size={16} /> Historial</Button>
+                  <Button size="sm" variant="outline" leftIcon={<Icon name="coins" size={16} />} onClick={() => { setAdjTarget(p); setAdjAmount(0); setAdjReason(''); setAdjRemove(false); }}>
+                    Saldo
+                  </Button>
                   <Button size="sm" variant={p.status === 'blocked' ? 'subtle' : 'danger'} onClick={() => setStatusTarget(p)}>
-                    {p.status === 'blocked' ? '✓ Reactivar' : '⛔ Bloquear'}
+                    {p.status === 'blocked' ? <><Icon name="check" size={16} /> Reactivar</> : <><Icon name="x" size={16} /> Bloquear</>}
                   </Button>
                 </div>
               </li>
@@ -235,18 +262,18 @@ export default function AdminJugadoresPage() {
         }
       >
         <div className="space-y-4">
-          <div className="flex items-center justify-between rounded-2xl bg-brand-50 px-4 py-3">
+          <div className="flex items-center justify-between rounded-2xl bg-surface-2 px-4 py-3">
             <div>
-              <span className="text-sm font-semibold text-brand-700">Saldo actual</span>
-              <div className="font-display text-base font-extrabold text-brand-900">
+              <span className="text-sm font-semibold text-fg-muted">Saldo actual</span>
+              <div className="font-display text-base font-extrabold text-fg">
                 <Money value={adjTarget?.balance} />
               </div>
             </div>
-            <div className="inline-flex rounded-xl border border-brand-100 bg-white p-1">
+            <div className="inline-flex rounded-xl border border-line bg-surface p-1">
               <button onClick={() => setAdjRemove(false)}
-                className={cn('rounded-lg px-3 py-1.5 text-sm font-bold transition-all', !adjRemove ? 'bg-brand-gradient text-white' : 'text-brand-600')}>+ Acreditar</button>
+                className={cn('inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-bold transition-all', !adjRemove ? 'bg-brand-gradient text-white' : 'text-fg-muted')}><Icon name="plus" size={14} /> Acreditar</button>
               <button onClick={() => setAdjRemove(true)}
-                className={cn('rounded-lg px-3 py-1.5 text-sm font-bold transition-all', adjRemove ? 'bg-red-600 text-white' : 'text-brand-600')}>− Descontar</button>
+                className={cn('inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-bold transition-all', adjRemove ? 'bg-brand-gradient text-white' : 'text-fg-muted')}><Icon name="minus" size={14} /> Descontar</button>
             </div>
           </div>
           <AmountInput value={adjAmount} onChange={setAdjAmount} label="Monto del ajuste" />
@@ -264,21 +291,21 @@ export default function AdminJugadoresPage() {
         {histLoading ? (
           <SkeletonRows rows={6} />
         ) : hist.length === 0 ? (
-          <EmptyState icon="🧾" title="Sin movimientos" subtitle="Este jugador todavía no tiene transacciones." />
+          <EmptyState icon={<Icon name="copy" size={36} />} title="Sin movimientos" subtitle="Este jugador todavía no tiene transacciones." />
         ) : (
-          <ul className="divide-y divide-brand-50">
+          <ul className="divide-y divide-line">
             {hist.map((t) => {
               const positive = t.type === 'cashier_load' || t.type === 'win' || (t.type === 'adjustment' && t.amount >= 0);
               return (
                 <li key={t.id} className="flex items-center gap-3 py-2.5">
-                  <Badge tone="gray">{TXN_LABEL[t.type]}</Badge>
+                  <Badge tone={TXN_META[t.type].tone} className="shrink-0 min-w-[68px] justify-center">{TXN_META[t.type].label}</Badge>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs text-gray-400">{timeAgo(t.created_at)}</p>
+                    <p className="text-xs text-fg-muted">{timeAgo(t.created_at)}</p>
                     {t.player_balance_after != null && (
-                      <p className="text-xs text-gray-400">Saldo: <Money value={t.player_balance_after} showChip={false} /></p>
+                      <p className="text-xs text-fg-muted">Saldo: <Money value={t.player_balance_after} showChip={false} /></p>
                     )}
                   </div>
-                  <Money value={t.amount} signed className={cn('text-sm', positive ? 'text-green-600' : 'text-red-600')} />
+                  <Money value={t.amount} signed className={cn('text-sm font-bold', positive ? 'text-win-600 dark:text-win-400' : 'text-brand-500')} />
                 </li>
               );
             })}

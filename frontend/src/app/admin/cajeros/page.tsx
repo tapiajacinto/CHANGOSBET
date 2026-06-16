@@ -1,8 +1,9 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import {
-  Card, CardTitle, StatCard, Money, Avatar, Badge, StatusBadge, Button,
-  Modal, ConfirmDialog, AmountInput, Input, Skeleton, EmptyState,
+  StatCard, Money, Avatar, Badge, StatusBadge, Button,
+  Modal, ConfirmDialog, AmountInput, Input, Skeleton, EmptyState, Card, Icon,
+  SectionHeader,
 } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { displayPhone } from '@/lib/format';
@@ -123,45 +124,70 @@ export default function AdminCajerosPage() {
     load();
   };
 
+  // ─── Resumen real (derivado de los cajeros cargados) ───
+  const totalFloat = rows.reduce((s, r) => s + num(r.recon?.float_balance), 0);
+  const totalCash = rows.reduce((s, r) => s + num(r.recon?.cash_on_hand), 0);
+  const activeCount = rows.filter((r) => r.profile.status === 'active').length;
+  const okCount = rows.filter((r) => num(r.recon?.cash_variance) === 0 && num(r.recon?.float_variance) === 0).length;
+
   return (
     <div className="space-y-6 animate-fade-up">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <h2 className="font-display text-2xl font-extrabold text-brand-900">Cajeros</h2>
-          <p className="text-sm text-gray-400">Float, caja y reconciliación de cada socio cajero.</p>
+      <SectionHeader
+        eyebrow="Socios cajeros"
+        title="Cajeros"
+        subtitle="Float, caja y reconciliación de cada socio cajero."
+        action={
+          <Button variant="gold" size="sm" onClick={() => setNewOpen(true)} className="shrink-0"
+            leftIcon={<Icon name="plus" size={16} />}>
+            Nuevo cajero
+          </Button>
+        }
+      />
+
+      {/* Resumen */}
+      {!loading && rows.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatCard label="Cajeros" icon={<Icon name="users" size={18} />}
+            value={rows.length} hint={`${activeCount} activo${activeCount === 1 ? '' : 's'}`} />
+          <StatCard tone="gold" label="Float total" icon={<Icon name="coins" size={18} />}
+            value={<Money value={totalFloat} compact showChip={false} />} />
+          <StatCard label="Efectivo en mano" icon={<Icon name="wallet" size={18} />}
+            value={<Money value={totalCash} compact showChip={false} />} />
+          <StatCard tone="green" label="Cajas conciliadas" icon={<Icon name="check" size={18} />}
+            value={`${okCount}/${rows.length}`} hint="Sin variancias" />
         </div>
-        <Button variant="gold" size="sm" onClick={() => setNewOpen(true)} className="shrink-0">+ Nuevo cajero</Button>
-      </div>
+      )}
 
       {loading ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-44 w-full" />)}
         </div>
       ) : rows.length === 0 ? (
-        <EmptyState icon="💵" title="Sin cajeros" subtitle="Promové un usuario a cajero para empezar."
-          action={<Button variant="gold" size="sm" onClick={() => setNewOpen(true)}>+ Nuevo cajero</Button>} />
+        <EmptyState icon={<Icon name="wallet" size={36} />} title="Sin cajeros" subtitle="Promové un usuario a cajero para empezar."
+          action={<Button variant="gold" size="sm" onClick={() => setNewOpen(true)}><Icon name="plus" size={16} /> Nuevo cajero</Button>} />
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
           {rows.map(({ profile: p, recon }) => {
             const cashVar = num(recon?.cash_variance);
             const floatVar = num(recon?.float_variance);
+            const allOk = cashVar === 0 && floatVar === 0;
             return (
-              <Card key={p.id}>
+              <Card key={p.id} hover accent={allOk ? 'none' : 'brand'}>
                 {/* Header */}
                 <div className="mb-4 flex items-center gap-3">
                   <Avatar alias={p.alias} size={44} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-display font-bold text-brand-900">{p.alias}</p>
-                    <p className="text-xs text-gray-400">{displayPhone(p.phone)}</p>
+                    <p className="truncate font-display font-bold text-fg">{p.alias}</p>
+                    <p className="text-xs text-fg-muted">{displayPhone(p.phone)}</p>
                   </div>
                   <StatusBadge status={p.status} />
                 </div>
 
                 {/* Float / cash */}
                 <div className="grid grid-cols-2 gap-3">
-                  <StatCard label="Float" icon="🏦"
+                  <StatCard label="Float" icon={<Icon name="coins" size={18} />}
                     value={<Money value={recon?.float_balance} compact showChip={false} />} />
-                  <StatCard label="Efectivo en mano" icon="💵"
+                  <StatCard label="Efectivo en mano" icon={<Icon name="wallet" size={18} />}
                     value={<Money value={recon?.cash_on_hand} compact showChip={false} />} />
                 </div>
 
@@ -169,33 +195,52 @@ export default function AdminCajerosPage() {
                 <div className="mt-3 grid grid-cols-2 gap-3">
                   <div className={cn(
                     'rounded-2xl border px-3 py-2.5',
-                    cashVar === 0 ? 'border-green-100 bg-green-50' : 'border-red-200 bg-red-50',
+                    cashVar === 0 ? 'border-win-500/25 bg-win-500/8' : 'border-brand-500/30 bg-brand-500/8',
                   )}>
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Var. efectivo</p>
-                    <p className={cn('font-display text-lg font-extrabold tabular-nums', cashVar === 0 ? 'text-green-700' : 'text-red-600')}>
-                      {cashVar === 0 ? '✓ 0' : <Money value={cashVar} showChip={false} signed />}
+                    <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+                      <Icon name={cashVar === 0 ? 'check' : 'alert'} size={13}
+                        className={cashVar === 0 ? 'text-win-500' : 'text-brand-500'} />
+                      Var. efectivo
+                    </p>
+                    <p className={cn('flex items-center gap-1 font-display text-lg font-extrabold tabular-nums',
+                      cashVar === 0 ? 'text-win-600 dark:text-win-400' : 'text-brand-500')}>
+                      {cashVar === 0 ? '0' : <Money value={cashVar} showChip={false} signed />}
                     </p>
                   </div>
                   <div className={cn(
                     'rounded-2xl border px-3 py-2.5',
-                    floatVar === 0 ? 'border-green-100 bg-green-50' : 'border-red-200 bg-red-50',
+                    floatVar === 0 ? 'border-win-500/25 bg-win-500/8' : 'border-brand-500/30 bg-brand-500/8',
                   )}>
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Var. float</p>
-                    <p className={cn('font-display text-lg font-extrabold tabular-nums', floatVar === 0 ? 'text-green-700' : 'text-red-600')}>
-                      {floatVar === 0 ? '✓ 0' : <Money value={floatVar} showChip={false} signed />}
+                    <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+                      <Icon name={floatVar === 0 ? 'check' : 'alert'} size={13}
+                        className={floatVar === 0 ? 'text-win-500' : 'text-brand-500'} />
+                      Var. float
+                    </p>
+                    <p className={cn('flex items-center gap-1 font-display text-lg font-extrabold tabular-nums',
+                      floatVar === 0 ? 'text-win-600 dark:text-win-400' : 'text-brand-500')}>
+                      {floatVar === 0 ? '0' : <Money value={floatVar} showChip={false} signed />}
                     </p>
                   </div>
                 </div>
 
                 {/* Actions */}
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Button size="sm" variant="primary" onClick={() => { setFloatTarget(p); setFloatRemove(false); setFloatAmount(0); }}>
-                    🏦 Float
+                <div className="mt-4 grid grid-cols-2 gap-2 border-t border-line pt-4 sm:flex sm:flex-wrap">
+                  <Button size="sm" variant="primary" className="min-w-0" leftIcon={<Icon name="coins" size={16} />}
+                    onClick={() => { setFloatTarget(p); setFloatRemove(false); setFloatAmount(0); }}>
+                    Float
                   </Button>
-                  <Button size="sm" variant={p.status === 'blocked' ? 'subtle' : 'outline'} onClick={() => setStatusTarget(p)}>
-                    {p.status === 'blocked' ? '✓ Reactivar' : '⛔ Bloquear'}
+                  {p.status === 'blocked' ? (
+                    <Button size="sm" variant="win" className="min-w-0" leftIcon={<Icon name="check" size={16} />} onClick={() => setStatusTarget(p)}>
+                      Reactivar
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="outline" className="min-w-0" leftIcon={<Icon name="x" size={16} />} onClick={() => setStatusTarget(p)}>
+                      Bloquear
+                    </Button>
+                  )}
+                  <Button size="sm" variant="ghost" className="min-w-0" leftIcon={<Icon name="lock" size={16} />} onClick={() => setCloseTarget(p)}>
+                    Cerrar caja
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setCloseTarget(p)}>🧮 Cerrar caja</Button>
                 </div>
               </Card>
             );
@@ -218,16 +263,16 @@ export default function AdminCajerosPage() {
         }
       >
         <div className="space-y-4">
-          <div className="flex items-center justify-between rounded-2xl bg-brand-50 px-4 py-3">
-            <span className="text-sm font-semibold text-brand-700">Modo</span>
-            <div className="inline-flex rounded-xl border border-brand-100 bg-white p-1">
+          <div className="flex items-center justify-between rounded-2xl bg-surface-2 px-4 py-3">
+            <span className="text-sm font-semibold text-fg">Modo</span>
+            <div className="inline-flex rounded-xl border border-line bg-surface p-1">
               <button
                 onClick={() => setFloatRemove(false)}
-                className={cn('rounded-lg px-3 py-1.5 text-sm font-bold transition-all', !floatRemove ? 'bg-brand-gradient text-white' : 'text-brand-600')}
+                className={cn('rounded-lg px-3 py-1.5 text-sm font-bold transition-all', !floatRemove ? 'bg-brand-gradient text-white' : 'text-fg-muted')}
               >Sumar</button>
               <button
                 onClick={() => setFloatRemove(true)}
-                className={cn('rounded-lg px-3 py-1.5 text-sm font-bold transition-all', floatRemove ? 'bg-red-600 text-white' : 'text-brand-600')}
+                className={cn('rounded-lg px-3 py-1.5 text-sm font-bold transition-all', floatRemove ? 'bg-brand-gradient text-white' : 'text-fg-muted')}
               >Quitar</button>
             </div>
           </div>
@@ -277,17 +322,17 @@ export default function AdminCajerosPage() {
           </div>
 
           {results.length === 0 ? (
-            <p className="py-4 text-center text-sm text-gray-400">
+            <p className="py-4 text-center text-sm text-fg-muted">
               {searching ? 'Buscando…' : 'Buscá un jugador para promoverlo a cajero.'}
             </p>
           ) : (
             <ul className="space-y-2">
               {results.map((u) => (
-                <li key={u.id} className="flex items-center gap-3 rounded-2xl border border-brand-100 px-3 py-2.5">
+                <li key={u.id} className="flex items-center gap-3 rounded-2xl border border-line px-3 py-2.5">
                   <Avatar alias={u.alias} size={36} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-bold text-brand-900">{u.alias}</p>
-                    <p className="text-xs text-gray-400">{displayPhone(u.phone)}</p>
+                    <p className="truncate text-sm font-bold text-fg">{u.alias}</p>
+                    <p className="text-xs text-fg-muted">{displayPhone(u.phone)}</p>
                   </div>
                   <Badge tone={u.role === 'admin' ? 'gold' : 'brand'}>{u.role === 'admin' ? 'Socio' : 'Jugador'}</Badge>
                   <Button size="sm" variant="gold" loading={promoting === u.id} onClick={() => promote(u)}>Promover</Button>

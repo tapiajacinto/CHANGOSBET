@@ -27,7 +27,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <Protected role="admin">
       <div className="min-h-screen bg-bg text-fg">
-        <div className="mx-auto flex min-h-screen w-full max-w-[1440px]">
+        <div className="flex min-h-screen w-full">
 
           {/* ─── SIDEBAR (desktop) ─── */}
           <aside className="hidden w-64 shrink-0 flex-col border-r border-line bg-surface lg:flex">
@@ -131,7 +131,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
             {/* PAGE */}
             <main className="flex-1 px-4 py-5 pb-28 sm:px-6 sm:py-7 lg:pb-10">
-              {children}
+              <div className="mx-auto w-full max-w-[1480px]">{children}</div>
             </main>
           </div>
         </div>

@@ -120,17 +120,17 @@ html, body {
 .glass-card { background: rgba(255,255,255,0.92); backdrop-filter: blur(10px); border: 1px solid rgba(192,0,10,0.2); border-radius: 16px; box-shadow: 0 4px 24px rgba(192,0,10,0.08); }
 .glass-card-dark { background: rgba(26,0,0,0.65); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; }
 
-/* Fondo ambiente: glows radiales rojo + tenue oro, anclados arriba */
+/* Fondo ambiente: glow radial suave, ARRIBA-CENTRO (sin anclaje lateral → sin franjas) */
 .ambient {
   background-image:
-    radial-gradient(720px 420px at 12% -8%,  rgb(var(--brand) / 0.16), transparent 60%),
-    radial-gradient(640px 420px at 92% -4%,  rgb(var(--gold)  / 0.07), transparent 55%);
+    radial-gradient(1100px 540px at 50% -18%, rgb(var(--brand) / 0.14), transparent 62%),
+    radial-gradient(820px 460px at 50% -12%,  rgb(var(--gold)  / 0.05), transparent 60%);
   background-repeat: no-repeat;
 }
 .ambient-win {
   background-image:
-    radial-gradient(720px 420px at 12% -8%,  rgb(var(--win)   / 0.14), transparent 60%),
-    radial-gradient(640px 420px at 92% -4%,  rgb(var(--gold)  / 0.06), transparent 55%);
+    radial-gradient(1100px 540px at 50% -18%, rgb(var(--win)  / 0.13), transparent 62%),
+    radial-gradient(820px 460px at 50% -12%,  rgb(var(--gold) / 0.05), transparent 60%);
   background-repeat: no-repeat;
 }
 

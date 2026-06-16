@@ -1,65 +1,78 @@
 # 🎰 CHANGOSBET — Guía de instalación
 
+Casino virtual multijugador con **economía de fichas de plata real**: los **cajeros** cargan
+y pagan fichas, los **socios (admin)** administran todo, y los **jugadores** juegan en salas
+privadas. Arquitectura **100% Vercel + Supabase** (sin backend propio, sin Railway).
+
 ## Requisitos
 - Node.js 18+
 - npm 9+
+- Un proyecto de Supabase
 
-## Instalación rápida
+## Instalación
 
 ```bash
-# Desde la carpeta raíz
-npm install
-npm run install:all
+# Desde la raíz
+npm run install:all      # instala raíz + frontend
 ```
 
-## Configurar variables de entorno
+## Variables de entorno
 
-### Backend
+`frontend/.env.local`:
 ```bash
-cp backend/.env.example backend/.env
-# Editar backend/.env con tus valores
+NEXT_PUBLIC_SUPABASE_URL=https://<tu-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key LEGACY>   # ojo: legacy JWT, no la publishable
 ```
+> Se usa la **anon key legacy** a propósito (supabase-js 2.39.3). No usar `sb_publishable_`.
 
-### Frontend
-```bash
-cp frontend/.env.local.example frontend/.env.local
-# Editar frontend/.env.local con tus valores
-```
+## Base de datos (Supabase)
 
-> **Sin Supabase:** El casino funciona igual sin configurar Supabase.
-> Los balances se guardan en memoria del servidor (se resetean al reiniciar).
-> Para persistencia, configurar Supabase (opcional).
+El schema está en `supabase/migrations/` (migraciones `0001`→`0008`). Aplicar con la CLI
+(`supabase db push`) o copiando cada archivo al SQL Editor en orden. Crea:
+`profiles · cashier_accounts · transactions` (ledger append-only) `· rooms · notifications`,
+RLS por rol, RPCs de plata atómicas y vistas de reconciliación.
+
+### Pasos manuales (no son SQL — se hacen en el Dashboard de Supabase)
+1. **Authentication → Providers → Phone**: habilitar. **Desactivar "Confirm phone"**
+   (no se envía OTP; el login es teléfono + contraseña).
+2. **Authentication → Hooks → Custom Access Token**: registrar la función
+   `public.custom_access_token_hook` (inyecta el rol en el JWT para RLS).
+3. **Primer admin (socio):** registrate normalmente en la app y luego, una sola vez, corré en
+   el SQL Editor:
+   ```sql
+   update public.profiles set role='admin', status='active'
+   where phone = '+54...';   -- tu teléfono en E.164
+   ```
+   Desde ahí, el panel admin maneja el resto (crear cajeros, asignar float, etc.).
 
 ## Correr en desarrollo
 
 ```bash
-# Corre backend (puerto 3001) y frontend (puerto 3000) juntos
-npm run dev
+npm run dev      # frontend en http://localhost:3000
 ```
-
-O por separado:
-```bash
-npm run dev:backend   # Solo el servidor
-npm run dev:frontend  # Solo el frontend
-```
-
-## Abrir el casino
-Ir a: http://localhost:3000
 
 ## Flujo de uso
-1. Entrar con un alias
-2. Crear una sala y elegir el juego
-3. Copiar el código de 6 caracteres
-4. Pasarle el código a tus amigos
-5. Los amigos entran en "Unirse a sala"
-6. ¡A jugar!
+1. **Registro:** alias + teléfono + contraseña → cuenta queda *pendiente*.
+2. **Activación:** un **cajero** te busca por teléfono/alias y te **activa** (te asocia a su caja).
+3. **Carga:** el cajero te **carga fichas** (a cambio de tu plata).
+4. **Jugar:** creás o te unís a una sala por código y jugás.
+5. **Retiro:** el cajero te **paga** tus fichas cuando querés cobrar.
 
-## Juegos disponibles
-- 🎡 Ruleta Europea (ciclo automático de 20s)
-- 🃏 Blackjack multijugador (15s para apostar)
-- ♠️ Texas Hold'em Poker (manual, el host inicia cada mano)
-- 🏇 Carreras de Caballos (ciclo automático de 20s)
-- ⚽ Apuestas de Fútbol (25s para apostar, luego simulación en vivo)
+### Roles
+- **Jugador** (`/lobby`, `/wallet`, `/room/[code]`)
+- **Cajero** (`/cajero`): activar jugadores, cargar/retirar fichas, historial, caja.
+- **Socio/Admin** (`/admin`): dashboard de totales, cajeros, jugadores, reconciliación.
 
-## Recargar fichas
-Si quedás en cero, el botón "Recargar" te da $100,000 al instante.
+## Juegos
+- 🎡 Ruleta Europea · 🃏 Blackjack · 🏇 Carreras de Caballos · ⚽ Fútbol  → activos, con plata real.
+- ♠️ Poker → **en mantenimiento** (se reactiva cuando se integre la economía de fichas a las
+  ciegas/pozos del poker).
+
+> Las fichas se **debitan al apostar** (RPC `place_bet`) y las ganancias se **acreditan**
+> automáticamente al cerrar la ronda (RPC `settle_game_round`, con tope e idempotencia). Ya no
+> hay "recarga gratis": las fichas solo entran por un cajero.
+
+## Deploy
+- **Frontend → Vercel**: root del proyecto = `frontend/`. Setear las env `NEXT_PUBLIC_*` y
+  (si se usan acciones admin server-side) `SUPABASE_SERVICE_ROLE_KEY`.
+- **Base de datos → Supabase** (la del proyecto).

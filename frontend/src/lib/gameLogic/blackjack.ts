@@ -1,7 +1,9 @@
 import type { BlackjackState, BJPlayer, Card } from '@/types';
 import { createDeck, dealCard, handValue } from './deck';
 
-export function createBJState(): BlackjackState & { deck: Card[] } {
+type BJInternal = BlackjackState & { deck: Card[]; lastPayouts?: Map<string, number> };
+
+export function createBJState(): BJInternal {
   return {
     phase: 'betting',
     deck: createDeck(6),
@@ -9,11 +11,12 @@ export function createBJState(): BlackjackState & { deck: Card[] } {
     players: [],
     currentPlayerSocketId: null,
     bettingTimeLeft: 15,
+    lastPayouts: new Map(),
   };
 }
 
 export function addBJPlayer(
-  state: BlackjackState & { deck: Card[] },
+  state: BJInternal,
   socketId: string,
   alias: string,
   balance: number,
@@ -23,7 +26,7 @@ export function addBJPlayer(
   state.players.push({ socketId, alias, balance, hand: [], bet: 0, status: 'betting', seatIndex });
 }
 
-export function placeBJBet(state: BlackjackState & { deck: Card[] }, socketId: string, amount: number): boolean {
+export function placeBJBet(state: BJInternal, socketId: string, amount: number): boolean {
   const player = state.players.find(p => p.socketId === socketId);
   if (!player || player.status !== 'betting' || amount <= 0 || amount > player.balance) return false;
   player.bet = amount;
@@ -31,7 +34,7 @@ export function placeBJBet(state: BlackjackState & { deck: Card[] }, socketId: s
   return true;
 }
 
-export function startBJRound(state: BlackjackState & { deck: Card[] }): void {
+export function startBJRound(state: BJInternal): void {
   if (state.deck.length < 20) state.deck = createDeck(6);
 
   state.dealerHand = [];
@@ -56,7 +59,7 @@ export function startBJRound(state: BlackjackState & { deck: Card[] }): void {
   if (!state.currentPlayerSocketId) dealerPlayBJ(state);
 }
 
-export function hitBJ(state: BlackjackState & { deck: Card[] }, socketId: string): boolean {
+export function hitBJ(state: BJInternal, socketId: string): boolean {
   const player = state.players.find(p => p.socketId === socketId);
   if (!player || player.status !== 'playing') return false;
   const [card, deck] = dealCard(state.deck, true);
@@ -68,7 +71,7 @@ export function hitBJ(state: BlackjackState & { deck: Card[] }, socketId: string
   return true;
 }
 
-export function standBJ(state: BlackjackState & { deck: Card[] }, socketId: string): boolean {
+export function standBJ(state: BJInternal, socketId: string): boolean {
   const player = state.players.find(p => p.socketId === socketId);
   if (!player || player.status !== 'playing') return false;
   player.status = 'standing';
@@ -76,7 +79,7 @@ export function standBJ(state: BlackjackState & { deck: Card[] }, socketId: stri
   return true;
 }
 
-export function doubleDownBJ(state: BlackjackState & { deck: Card[] }, socketId: string): boolean {
+export function doubleDownBJ(state: BJInternal, socketId: string): boolean {
   const player = state.players.find(p => p.socketId === socketId);
   if (!player || player.status !== 'playing' || player.hand.length !== 2 || player.balance < player.bet) return false;
   player.balance -= player.bet;
@@ -89,13 +92,13 @@ export function doubleDownBJ(state: BlackjackState & { deck: Card[] }, socketId:
   return true;
 }
 
-function advanceBJ(state: BlackjackState & { deck: Card[] }): void {
+function advanceBJ(state: BJInternal): void {
   const next = findNextBJPlayer(state, state.currentPlayerSocketId);
   if (next) { state.currentPlayerSocketId = next; }
   else { state.currentPlayerSocketId = null; dealerPlayBJ(state); }
 }
 
-function findNextBJPlayer(state: BlackjackState & { deck: Card[] }, afterId: string | null): string | null {
+function findNextBJPlayer(state: BJInternal, afterId: string | null): string | null {
   const ordered = [...state.players].sort((a, b) => a.seatIndex - b.seatIndex);
   let found = afterId === null;
   for (const p of ordered) {
@@ -105,7 +108,7 @@ function findNextBJPlayer(state: BlackjackState & { deck: Card[] }, afterId: str
   return null;
 }
 
-export function dealerPlayBJ(state: BlackjackState & { deck: Card[] }): Map<string, number> {
+export function dealerPlayBJ(state: BJInternal): Map<string, number> {
   if (state.dealerHand[1]) state.dealerHand[1].faceUp = true;
   while (handValue(state.dealerHand) < 17) {
     const [card, deck] = dealCard(state.deck, true);
@@ -135,11 +138,12 @@ export function dealerPlayBJ(state: BlackjackState & { deck: Card[] }): Map<stri
     }
     player.status = 'done';
   }
+  state.lastPayouts = payouts;   // payouts BRUTOS por socketId (para settle_game_round)
   state.phase = 'results';
   return payouts;
 }
 
-export function resetBJRound(state: BlackjackState & { deck: Card[] }): void {
+export function resetBJRound(state: BJInternal): void {
   state.phase = 'betting';
   state.dealerHand = [];
   state.currentPlayerSocketId = null;
@@ -147,7 +151,7 @@ export function resetBJRound(state: BlackjackState & { deck: Card[] }): void {
   for (const p of state.players) { p.hand = []; p.bet = 0; p.status = 'betting'; }
 }
 
-export function serializeBJState(state: BlackjackState & { deck: Card[] }): BlackjackState {
-  const { deck: _deck, ...rest } = state;
+export function serializeBJState(state: BJInternal): BlackjackState {
+  const { deck: _deck, lastPayouts: _lp, ...rest } = state;
   return rest;
 }

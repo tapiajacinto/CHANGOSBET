@@ -1,222 +1,138 @@
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@400;500;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
+  --brand:        #c0000a;
+  --brand-deep:   #7f0000;
+  --brand-light:  #ed2f2f;
+  --gold:         #e8b923;
+  --surface:      #ffffff;
+  --surface-soft: #fff8f6;
+  /* legacy aliases (juegos) */
   --casino-primary: #c0000a;
   --casino-primary-dark: #7f0000;
-  --casino-primary-light: #ff4444;
-  --casino-bg: #ffffff;
-  --casino-surface: #fff5f5;
-  --casino-card: #fff0f0;
-  --casino-red: #c0000a;
   --casino-felt: #0d3b2e;
-  --casino-green: #1b4332;
 }
 
 * { box-sizing: border-box; }
 
 html, body {
-  background-color: #ffffff;
-  color: #1a1a1a;
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background-color: var(--surface-soft);
+  color: #181013;
+  font-family: var(--font-sans), system-ui, -apple-system, 'Segoe UI', sans-serif;
   min-height: 100vh;
   margin: 0;
   padding: 0;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
+
+/* Safe-area helpers (mobile bottom nav / notches) */
+.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+.pt-safe { padding-top: env(safe-area-inset-top); }
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #fff0f0; }
-::-webkit-scrollbar-thumb { background: var(--casino-primary); border-radius: 3px; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(192,0,10,0.35); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(192,0,10,0.55); }
 
-/* Card face */
-.card-face {
-  background: white;
-  border-radius: 6px;
-  border: 1px solid #ddd;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  user-select: none;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-  position: relative;
-  overflow: hidden;
+/* ─────────────── Design-system utilities (Rojo Argentino Pro) ─────────────── */
+
+/* Texto con degradé de marca */
+.text-gradient-brand {
+  background: linear-gradient(135deg, #ed2f2f, #ff9b9b);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.text-gradient-gold {
+  background: linear-gradient(135deg, #c8930a, #ffe788);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
+/* Glass premium claro y oscuro */
+.glass {
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(192,0,10,0.12);
+}
+.glass-dark {
+  background: rgba(20,10,16,0.55);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.10);
+}
+/* legacy aliases */
+.glass-card { background: rgba(255,255,255,0.92); backdrop-filter: blur(10px); border: 1px solid rgba(192,0,10,0.2); border-radius: 16px; box-shadow: 0 4px 24px rgba(192,0,10,0.08); }
+.glass-card-dark { background: rgba(26,0,0,0.65); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; }
+
+/* Patrón de puntos suave para fondos */
+.bg-dots { background-image: radial-gradient(circle, rgba(255,255,255,0.10) 1px, transparent 1px); background-size: 22px 22px; }
+
+/* Skeleton shimmer */
+.skeleton { position: relative; overflow: hidden; background: rgba(192,0,10,0.06); }
+.skeleton::after {
+  content: ''; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+  animation: shimmer 1.6s infinite;
+}
+@keyframes shimmer { 100% { transform: translateX(100%); } }
+
+/* Esconder scrollbar en carruseles */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ─────────────── Clases de juego (preservadas; rediseño gradual) ─────────────── */
+
+.card-face {
+  background: white; border-radius: 6px; border: 1px solid #ddd;
+  display: flex; align-items: center; justify-content: center; font-weight: bold;
+  user-select: none; box-shadow: 0 2px 8px rgba(0,0,0,0.15); position: relative; overflow: hidden;
+}
 .card-back {
   background: linear-gradient(135deg, #7f0000 25%, #a00000 25%, #a00000 50%, #7f0000 50%, #7f0000 75%, #a00000 75%);
-  background-size: 20px 20px;
-  border-radius: 6px;
-  border: 2px solid #ffd700;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  background-size: 20px 20px; border-radius: 6px; border: 2px solid #ffd700; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
-
-/* Felt table - kept green (traditional casino aesthetic) */
 .felt-table {
   background: radial-gradient(ellipse at center, #1b4332 0%, #0d3b2e 60%, #071f18 100%);
-  border: 4px solid #8B6914;
-  border-radius: 16px;
+  border: 4px solid #8B6914; border-radius: 16px;
   box-shadow: inset 0 0 40px rgba(0,0,0,0.5), 0 0 30px rgba(0,0,0,0.3);
 }
+.poker-table-outer {
+  background: radial-gradient(ellipse at center, #1b4332 0%, #0d3b2e 70%, #071f18 100%);
+  border: 8px solid #8B6914; border-radius: 50%;
+  box-shadow: inset 0 0 60px rgba(0,0,0,0.6), 0 0 40px rgba(0,0,0,0.5);
+}
+.gold-glow { color: #c0000a; text-shadow: 0 0 10px rgba(192,0,10,0.4), 0 0 20px rgba(192,0,10,0.2); }
 
-/* Red glow text */
-.gold-glow {
-  color: #c0000a;
-  text-shadow: 0 0 10px rgba(192,0,10,0.4), 0 0 20px rgba(192,0,10,0.2);
-}
-
-/* Casino button - RED theme */
-.casino-btn {
-  background: linear-gradient(135deg, #7f0000 0%, #c0000a 50%, #7f0000 100%);
-  color: white;
-  font-weight: bold;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  box-shadow: 0 4px 15px rgba(192,0,10,0.35);
-}
-.casino-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 25px rgba(192,0,10,0.55);
-  background: linear-gradient(135deg, #a00000 0%, #e0001a 50%, #a00000 100%);
-}
-.casino-btn:active { transform: translateY(0); }
-.casino-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  transform: none;
-}
-
-/* Chip */
 .chip {
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  font-size: 12px;
-  cursor: pointer;
-  border: 3px dashed rgba(255,255,255,0.4);
-  transition: transform 0.15s;
-  user-select: none;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-weight: bold; font-size: 12px; cursor: pointer; border: 3px dashed rgba(255,255,255,0.4);
+  transition: transform 0.15s; user-select: none;
 }
 .chip:hover { transform: scale(1.1); }
 
-/* Roulette bet cell */
 .bet-cell {
-  border: 1px solid rgba(255,255,255,0.25);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 0.15s;
-  font-size: 12px;
-  font-weight: bold;
-  position: relative;
-  flex-direction: column;
-  gap: 1px;
+  border: 1px solid rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: background 0.15s; font-size: 12px; font-weight: bold;
+  position: relative; flex-direction: column; gap: 1px;
 }
 .bet-cell:hover { background: rgba(255,255,255,0.18); }
 .bet-cell.red-cell { background: rgba(192,0,10,0.75); }
 .bet-cell.black-cell { background: rgba(10,10,20,0.9); }
 .bet-cell.green-cell { background: rgba(27,67,50,0.85); }
-
-/* bet chip indicator */
 .bet-chip-indicator {
-  position: absolute;
-  top: 1px;
-  right: 1px;
-  background: #ffd700;
-  color: #1a1a1a;
-  font-size: 8px;
-  font-weight: 900;
-  border-radius: 50%;
-  width: 16px;
-  height: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid #b8860b;
-  z-index: 10;
-  line-height: 1;
+  position: absolute; top: 1px; right: 1px; background: #ffd700; color: #1a1a1a;
+  font-size: 8px; font-weight: 900; border-radius: 50%; width: 16px; height: 16px;
+  display: flex; align-items: center; justify-content: center; border: 1px solid #b8860b; z-index: 10; line-height: 1;
 }
 
-/* Animations */
-@keyframes dealCard {
-  from { transform: translateY(-60px) rotate(-5deg); opacity: 0; }
-  to   { transform: translateY(0) rotate(0); opacity: 1; }
-}
+@keyframes dealCard { from { transform: translateY(-60px) rotate(-5deg); opacity: 0; } to { transform: translateY(0) rotate(0); opacity: 1; } }
 .deal-animation { animation: dealCard 0.4s ease-out; }
-
-@keyframes winPulse {
-  0%, 100% { box-shadow: 0 0 0 rgba(192,0,10,0); }
-  50% { box-shadow: 0 0 20px rgba(192,0,10,0.8), 0 0 40px rgba(192,0,10,0.4); }
-}
+@keyframes winPulse { 0%,100% { box-shadow: 0 0 0 rgba(192,0,10,0); } 50% { box-shadow: 0 0 20px rgba(192,0,10,0.8), 0 0 40px rgba(192,0,10,0.4); } }
 .win-pulse { animation: winPulse 1s ease-in-out 3; }
-
-@keyframes horseRunKf {
-  from { transform: translateX(0); }
-  to   { transform: translateX(var(--horse-end)); }
-}
-
-@keyframes ballBounce {
-  0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(-8px); }
-}
+@keyframes ballBounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 .ball-bounce { animation: ballBounce 0.5s ease-in-out infinite; }
-
-@keyframes countdownPulse {
-  0%, 100% { color: #ffd700; }
-  50% { color: #ff4444; }
-}
+@keyframes countdownPulse { 0%,100% { color: #ffd700; } 50% { color: #ff4444; } }
 .countdown-urgent { animation: countdownPulse 0.5s ease-in-out infinite; }
-
-/* Poker table oval */
-.poker-table-outer {
-  background: radial-gradient(ellipse at center, #1b4332 0%, #0d3b2e 70%, #071f18 100%);
-  border: 8px solid #8B6914;
-  border-radius: 50%;
-  box-shadow: inset 0 0 60px rgba(0,0,0,0.6), 0 0 40px rgba(0,0,0,0.5);
-}
-
-/* Glass card - light version for lobby/room pages */
-.glass-card {
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(192,0,10,0.2);
-  border-radius: 16px;
-  box-shadow: 0 4px 24px rgba(192,0,10,0.08);
-}
-
-/* Glass card dark - for game pages with dark backgrounds */
-.glass-card-dark {
-  background: rgba(26, 0, 0, 0.65);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 12px;
-}
-
-/* Sidebar */
-.sidebar-transition {
-  transition: width 0.3s ease, transform 0.3s ease;
-}
-
-/* Lobby card */
-.lobby-card {
-  background: white;
-  border: 2px solid rgba(192,0,10,0.15);
-  border-radius: 20px;
-  box-shadow: 0 4px 24px rgba(192,0,10,0.08);
-  transition: box-shadow 0.2s, transform 0.2s;
-}
-.lobby-card:hover {
-  box-shadow: 0 8px 32px rgba(192,0,10,0.18);
-  transform: translateY(-2px);
-}

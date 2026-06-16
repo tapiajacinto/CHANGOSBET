@@ -1428,7 +1428,7 @@ function BetSlipPanel({
 
 /* ─────────────────────── MAIN COMPONENT ─────────────────────── */
 export default function FootballGame({ code: _code }: Props) {
-  const { emit, on, off, myId, balance } = useRoom();
+  const { emit, on, off, myId, balance, placeBet: debitBet } = useRoom();
   const { user } = useAuth();
 
   /* game state */
@@ -1512,12 +1512,23 @@ export default function FootballGame({ code: _code }: Props) {
 
   const removeBet = (matchId: string) => setBetSlips(prev => prev.filter(b => b.matchId !== matchId));
 
-  const confirmBets = () => {
+  const confirmBets = async () => {
     if (!betSlips.length) return;
+    let confirmed = 0;
     for (const slip of betSlips) {
+      // Débito instantáneo del propio saldo. Si no se acepta (saldo insuficiente
+      // o ronda cerrada), no se apuesta ese slip. Las fichas NO se reembolsan.
+      const ok = await debitBet(slip.amount);
+      if (!ok) {
+        toast.error('Saldo insuficiente o ronda cerrada');
+        break;
+      }
       emit('football:bet', { playerId: myId, matchId: slip.matchId, betType: slip.betType, amount: slip.amount, odds: slip.odds });
+      confirmed++;
     }
-    toast.success(`⚽ ${betSlips.length} apuesta${betSlips.length !== 1 ? 's' : ''} confirmada${betSlips.length !== 1 ? 's' : ''}!`);
+    if (confirmed > 0) {
+      toast.success(`⚽ ${confirmed} apuesta${confirmed !== 1 ? 's' : ''} confirmada${confirmed !== 1 ? 's' : ''}!`);
+    }
     setBetSlips([]);
   };
 

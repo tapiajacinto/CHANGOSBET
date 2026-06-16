@@ -167,7 +167,7 @@ function ChipButton({
 interface Props { code: string; }
 
 export default function RouletteGame({ code: _code }: Props) {
-  const { emit, on, off, myId } = useRoom();
+  const { emit, on, off, myId, placeBet: debitBet } = useRoom();
   const { user: _u } = useAuth();
 
   const [state, setState]           = useState<RouletteState | null>(null);
@@ -236,24 +236,18 @@ export default function RouletteGame({ code: _code }: Props) {
   }, [on, off, myId, totalBet]);
 
   /* ── Actions ── */
-  const placeBet = useCallback((type: RouletteBetType, numbers?: number[]) => {
+  const placeBet = useCallback(async (type: RouletteBetType, numbers?: number[]) => {
     if (!state || state.phase !== 'betting') return;
     const nums = numbers ?? buildBetNumbers(type);
     const key  = type === 'straight' ? `straight_${nums[0]}` : type;
+    const ok = await debitBet(selectedChip);
+    if (!ok) return;
     emit('roulette:bet', { playerId: myId, type, numbers: nums, amount: selectedChip });
     setBetActions(prev => [...prev, {
       id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
       type, key, numbers: nums, amount: selectedChip,
     }]);
-  }, [state, emit, myId, selectedChip]);
-
-  const undoLast = useCallback(() => {
-    setBetActions(prev => prev.slice(0, -1));
-  }, []);
-
-  const clearAll = useCallback(() => {
-    setBetActions([]);
-  }, []);
+  }, [state, emit, myId, selectedChip, debitBet]);
 
   /* ── Wheel conic gradient ── */
   const conicGradient = WHEEL_ORDER.map((n, i) => {
@@ -460,41 +454,6 @@ export default function RouletteGame({ code: _code }: Props) {
             <p className="text-white/45 text-[11px] uppercase tracking-widest font-semibold">
               Ficha seleccionada
             </p>
-            {/* Action buttons */}
-            <div className="flex gap-1.5">
-              {/* Undo */}
-              <button onClick={undoLast} disabled={betCount === 0}
-                title="Deshacer última apuesta"
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold
-                           transition-all disabled:opacity-25 disabled:cursor-not-allowed"
-                style={{
-                  background: betCount > 0 ? 'rgba(251,191,36,0.12)' : 'rgba(255,255,255,0.05)',
-                  border: betCount > 0 ? '1px solid rgba(251,191,36,0.3)' : '1px solid rgba(255,255,255,0.1)',
-                  color: betCount > 0 ? '#fbbf24' : 'rgba(255,255,255,0.3)',
-                }}>
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
-                    d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                </svg>
-                <span>Deshacer</span>
-              </button>
-              {/* Clear */}
-              <button onClick={clearAll} disabled={betCount === 0}
-                title="Limpiar mesa"
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold
-                           transition-all disabled:opacity-25 disabled:cursor-not-allowed"
-                style={{
-                  background: betCount > 0 ? 'rgba(239,68,68,0.12)' : 'rgba(255,255,255,0.05)',
-                  border: betCount > 0 ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(255,255,255,0.1)',
-                  color: betCount > 0 ? '#f87171' : 'rgba(255,255,255,0.3)',
-                }}>
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-                <span>Limpiar</span>
-              </button>
-            </div>
           </div>
 
           {/* Chips row */}
@@ -727,7 +686,6 @@ export default function RouletteGame({ code: _code }: Props) {
                 <span className="text-yellow-300/80 font-semibold">
                   ${totalBet.toLocaleString()} apostados en {Object.keys(myBets).length} tipo{Object.keys(myBets).length !== 1 ? 's' : ''}
                 </span>
-                <span className="ml-auto text-white/25">Usá Deshacer para corregir</span>
               </motion.div>
             )}
             {!bettingOpen && state && (

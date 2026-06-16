@@ -11,7 +11,7 @@ const CHIP_COLORS = ['#f8f9fa', '#e63946', '#4361ee', '#2dc653', '#7b2d8b'];
 interface Props { code: string; }
 
 export default function HorsesGame({ code: _code }: Props) {
-  const { emit, on, off, myId } = useRoom();
+  const { emit, on, off, myId, placeBet: debitBet } = useRoom();
   const [state, setState] = useState<HorsesState | null>(null);
   const [selectedChip, setSelectedChip] = useState(500);
   const [positions, setPositions] = useState<number[]>(new Array(8).fill(0));
@@ -50,8 +50,10 @@ export default function HorsesGame({ code: _code }: Props) {
     return () => { off('horses:state', onState); off('horses:timer', onTimer); off('horses:frame', onFrame); off('horses:result', onResult); };
   }, [on, off, myId]);
 
-  const bet = (horseId: number) => {
+  const bet = async (horseId: number) => {
     if (!state || state.phase !== 'betting') return;
+    const ok = await debitBet(selectedChip);
+    if (!ok) return;
     emit('horses:bet', { playerId: myId, horseId, amount: selectedChip });
     setMyBets(prev => ({ ...prev, [horseId]: (prev[horseId] || 0) + selectedChip }));
     toast(`$${selectedChip.toLocaleString()} en caballo #${horseId}`, { duration: 1500 });

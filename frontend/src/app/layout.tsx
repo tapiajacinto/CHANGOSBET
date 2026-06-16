@@ -5,8 +5,8 @@ import { RoomProvider } from '@/contexts/RoomContext';
 import { Toaster } from 'react-hot-toast';
 
 export const metadata: Metadata = {
-  title: 'CHANGOSBET Casino',
-  description: 'Casino virtual multijugador con dinero ficticio',
+  title: 'Casino de Amigos',
+  description: 'Casino virtual multijugador con fichas ilimitadas — 100% gratuito',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -20,10 +20,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               position="top-right"
               toastOptions={{
                 style: {
-                  background: '#1a1a3a',
-                  color: '#ffd700',
-                  border: '1px solid #ffd700',
-                  fontFamily: 'Georgia, serif',
+                  background: '#ffffff',
+                  color: '#9a0000',
+                  border: '1.5px solid #fecaca',
+                  fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif",
+                  fontWeight: '600',
+                  borderRadius: '14px',
+                  boxShadow: '0 4px 20px rgba(192,0,10,0.12)',
+                },
+                success: {
+                  iconTheme: { primary: '#c0000a', secondary: '#fff' },
+                },
+                error: {
+                  iconTheme: { primary: '#ef4444', secondary: '#fff' },
                 },
               }}
             />

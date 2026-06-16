@@ -4,29 +4,28 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRoom } from '@/contexts/RoomContext';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 const GAME_ROUTES: Record<string, { label: string; icon: string }> = {
-  roulette: { label: 'Ruleta Europea', icon: '🎡' },
-  blackjack: { label: 'Blackjack', icon: '🃏' },
-  poker: { label: 'Texas Hold\'em', icon: '♠️' },
-  horses: { label: 'Carreras de Caballos', icon: '🏇' },
-  football: { label: 'Apuestas de Fútbol', icon: '⚽' },
+  roulette:  { label: 'Ruleta Europea',       icon: '🎡' },
+  blackjack: { label: 'Blackjack 21',         icon: '🃏' },
+  poker:     { label: "Texas Hold'em",        icon: '♠️' },
+  horses:    { label: 'Carreras de Caballos', icon: '🏇' },
+  football:  { label: 'Apuestas de Fútbol',  icon: '⚽' },
 };
 
 export default function RoomPage() {
-  const params = useParams();
-  const code = (params.code as string).toUpperCase();
+  const params  = useParams();
+  const code    = (params.code as string).toUpperCase();
   const { user } = useAuth();
   const { roomCode, roomName, gameType, players, balance, isHost, hostId, joinRoom, reloadBalance } = useRoom();
-  const router = useRouter();
-  const [copied, setCopied] = useState(false);
+  const router  = useRouter();
+  const [copied,  setCopied]  = useState(false);
   const [joining, setJoining] = useState(false);
 
   useEffect(() => {
     if (!user) { router.push('/'); return; }
-    // If not connected to this room yet, join it
     if (roomCode !== code) {
       setJoining(true);
       joinRoom(code).then(ok => {
@@ -40,7 +39,7 @@ export default function RoomPage() {
     navigator.clipboard.writeText(code);
     setCopied(true);
     toast.success('¡Código copiado!');
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => setCopied(false), 2200);
   };
 
   const handleReload = () => {
@@ -48,12 +47,17 @@ export default function RoomPage() {
     toast.success('¡$100,000 fichas cargadas!');
   };
 
+  /* Loading state */
   if (!user || joining || !roomCode) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a0a14' }}>
+      <div className="min-h-screen flex items-center justify-center"
+        style={{ background: 'linear-gradient(135deg, #7f0000, #c0000a)' }}>
         <div className="text-center">
-          <div className="text-4xl mb-4 animate-spin">🎰</div>
-          <p className="text-yellow-400">Cargando sala...</p>
+          <motion.div className="text-5xl mb-4"
+            animate={{ rotate: 360 }} transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}>
+            🎰
+          </motion.div>
+          <p className="text-white/70 font-semibold">Cargando sala...</p>
         </div>
       </div>
     );
@@ -62,66 +66,163 @@ export default function RoomPage() {
   const gameInfo = gameType ? GAME_ROUTES[gameType] : null;
 
   return (
-    <div className="min-h-screen" style={{ background: 'radial-gradient(ellipse at center, #12122a 0%, #0a0a14 100%)' }}>
-      <header className="flex items-center justify-between px-4 py-3 border-b border-yellow-400/20">
-        <div className="flex items-center gap-3">
-          <Link href="/lobby" className="text-gray-500 hover:text-yellow-400 transition-colors text-sm">← Lobby</Link>
-          <span className="text-gray-600">|</span>
-          <h1 className="text-yellow-400 font-bold">{roomName}</h1>
-          {isHost && <span className="text-xs text-yellow-400/60 bg-yellow-400/10 px-2 py-0.5 rounded-full">👑 Host</span>}
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="text-sm text-gray-400">💰 <span className="text-yellow-400 font-bold">${balance.toLocaleString()}</span></div>
-          {balance < 1000 && (
-            <button onClick={handleReload} className="px-3 py-1 rounded-lg text-xs font-bold bg-green-800 hover:bg-green-700 text-green-300 transition-colors">
-              🔄 Recargar
-            </button>
+    <div className="min-h-screen"
+      style={{ background: 'linear-gradient(145deg, #fff5f5 0%, #ffffff 60%, #fff0f0 100%)' }}>
+
+      {/* ─── HEADER ─── */}
+      <header className="sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 py-3.5
+                          border-b border-red-100 shadow-sm"
+        style={{ background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(12px)' }}>
+
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <Link href="/lobby"
+            className="flex-shrink-0 text-red-300 hover:text-red-600 transition-colors
+                       text-sm font-semibold px-2 py-1 rounded-lg hover:bg-red-50">
+            ← Lobby
+          </Link>
+          <span className="text-red-200 hidden sm:block">|</span>
+          <h1 className="text-red-700 font-black truncate max-w-[160px] sm:max-w-none">{roomName}</h1>
+          {isHost && (
+            <span className="flex-shrink-0 text-xs text-red-600 font-bold bg-red-50
+                             border border-red-200 px-2 py-0.5 rounded-full">
+              👑 Host
+            </span>
           )}
-          <span className="text-gray-500 text-sm">👤 {user?.alias}</span>
+        </div>
+
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
+            style={{ background: '#fff5f5', border: '1px solid #fecaca' }}>
+            <span className="text-xs text-gray-400">💰</span>
+            <span className="text-red-700 font-black text-sm">${balance.toLocaleString()}</span>
+          </div>
+
+          <AnimatePresence>
+            {balance < 1000 && (
+              <motion.button initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                onClick={handleReload}
+                className="px-3 py-1.5 rounded-xl text-xs font-black text-white transition-all"
+                style={{ background: 'linear-gradient(135deg, #166534, #15803d)' }}>
+                🔄 Recargar
+              </motion.button>
+            )}
+          </AnimatePresence>
+
+          <span className="text-gray-400 text-xs sm:text-sm hidden sm:block">👤 {user?.alias}</span>
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-6 mb-6 text-center">
-          <p className="text-gray-400 text-sm mb-2 uppercase tracking-wider">Código de la sala · Compartilo con tus amigos</p>
-          <div className="flex items-center justify-center gap-3">
-            <span className="text-4xl font-bold tracking-widest text-yellow-400 font-mono">{code}</span>
-            <button onClick={copyCode}
-              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-                copied ? 'bg-green-600 text-white' : 'bg-yellow-400/20 text-yellow-400 hover:bg-yellow-400/30'
-              }`}>
+      {/* ─── MAIN ─── */}
+      <div className="max-w-3xl mx-auto px-4 py-8 space-y-5">
+
+        {/* Room code card */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          className="rounded-3xl p-6 text-center"
+          style={{
+            background: 'linear-gradient(135deg, #7f0000, #b00000)',
+            boxShadow: '0 8px 32px rgba(192,0,10,0.25)',
+          }}>
+          <div className="absolute inset-0 opacity-[0.06] pointer-events-none rounded-3xl overflow-hidden"
+            style={{
+              backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
+              backgroundSize: '18px 18px',
+            }} />
+          <p className="text-white/50 text-xs mb-3 uppercase tracking-widest font-semibold">
+            Código de la sala · Compartilo con tus amigos
+          </p>
+          <div className="flex items-center justify-center gap-4">
+            <span className="text-4xl sm:text-5xl font-black tracking-[0.2em] text-white font-mono">
+              {code}
+            </span>
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+              onClick={copyCode}
+              className={`px-4 py-2.5 rounded-xl text-sm font-black transition-all ${
+                copied
+                  ? 'bg-green-500 text-white'
+                  : 'bg-white text-red-700 hover:bg-red-50'
+              }`}
+              style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
               {copied ? '✓ Copiado' : '📋 Copiar'}
-            </button>
+            </motion.button>
           </div>
-          <p className="text-gray-500 text-xs mt-2">{players.length} jugador{players.length !== 1 ? 'es' : ''} en la sala</p>
+          <p className="text-white/35 text-xs mt-3">
+            {players.length} jugador{players.length !== 1 ? 'es' : ''} en la sala
+          </p>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="glass-card p-4 mb-6">
-          <h3 className="text-yellow-400 font-bold mb-3 text-sm uppercase tracking-wider">Jugadores</h3>
+        {/* Players card */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="rounded-3xl p-5 sm:p-6"
+          style={{ background: 'white', border: '2px solid #fecaca', boxShadow: '0 4px 20px rgba(192,0,10,0.07)' }}>
+          <h3 className="text-red-700 font-black text-sm uppercase tracking-widest mb-4">
+            👥 Jugadores en la Sala
+          </h3>
           <div className="flex flex-wrap gap-2">
             {players.map(p => (
               <div key={p.socketId}
-                className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 ${
-                  p.socketId === hostId ? 'bg-yellow-400/20 border border-yellow-400/50' : 'bg-white/5'
-                }`}>
-                {p.socketId === hostId && <span className="text-yellow-400">👑</span>}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-all ${
+                  p.socketId === hostId
+                    ? 'text-red-700 font-bold'
+                    : 'text-gray-600'
+                }`}
+                style={{
+                  background: p.socketId === hostId ? '#fff5f5' : '#f9f9f9',
+                  border: p.socketId === hostId ? '1.5px solid #fecaca' : '1.5px solid #f3f4f6',
+                }}>
+                {p.socketId === hostId && <span>👑</span>}
                 <span>{p.alias}</span>
-                <span className="text-gray-500">${p.balance.toLocaleString()}</span>
+                <span className="text-gray-400 text-xs">${p.balance.toLocaleString()}</span>
               </div>
             ))}
-            {players.length === 0 && <p className="text-gray-600 text-sm">Conectando jugadores...</p>}
+            {players.length === 0 && (
+              <div className="flex items-center gap-2 text-gray-400 text-sm">
+                <motion.div className="w-2 h-2 rounded-full bg-yellow-400"
+                  animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.2, repeat: Infinity }} />
+                Esperando jugadores...
+              </div>
+            )}
           </div>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="text-center">
-          <p className="text-gray-400 mb-4">Esta sala está configurada para:</p>
+        {/* Play button */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="text-center py-4">
+          <p className="text-gray-400 text-sm mb-5">Esta sala está configurada para:</p>
           {gameInfo && (
-            <Link href={`/room/${code}/${gameType}`} className="casino-btn inline-block px-10 py-5 text-xl rounded-xl">
-              {gameInfo.icon} Jugar {gameInfo.label}
+            <Link href={`/room/${code}/${gameType}`}>
+              <motion.div whileHover={{ scale: 1.04, y: -3 }} whileTap={{ scale: 0.97 }}
+                className="inline-block px-12 py-5 rounded-2xl text-white font-black text-xl
+                           cursor-pointer transition-all"
+                style={{
+                  background: 'linear-gradient(135deg, #9a0000, #c0000a)',
+                  boxShadow: '0 8px 32px rgba(192,0,10,0.4)',
+                }}>
+                {gameInfo.icon} Jugar {gameInfo.label}
+              </motion.div>
             </Link>
           )}
-          <p className="text-gray-600 text-xs mt-3">El balance se recarga gratis si llegás a cero</p>
+          <p className="text-gray-400 text-xs mt-4">
+            💰 El balance se recarga gratis si llegás a cero
+          </p>
         </motion.div>
+
+        {/* Info strip */}
+        <div className="grid grid-cols-3 gap-3 text-center pb-4">
+          {[
+            { icon: '♾️', label: 'Fichas ilimitadas' },
+            { icon: '🔒', label: 'Sala privada'     },
+            { icon: '🆓', label: '100% gratuito'    },
+          ].map(item => (
+            <div key={item.label} className="py-3 rounded-2xl"
+              style={{ background: 'white', border: '1px solid #fecaca' }}>
+              <div className="text-2xl mb-0.5">{item.icon}</div>
+              <div className="text-xs text-red-500 font-semibold">{item.label}</div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

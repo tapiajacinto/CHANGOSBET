@@ -5,6 +5,7 @@ import { useRoom } from '@/contexts/RoomContext';
 import Link from 'next/link';
 import ChatPanel from '@/components/chat/ChatPanel';
 import { motion, AnimatePresence } from 'framer-motion';
+import { formatChips } from '@/lib/format';
 
 interface Props {
   code: string;
@@ -15,7 +16,7 @@ interface Props {
 
 export default function GameLayout({ code, gameName, gameIcon, children }: Props) {
   const { user } = useAuth();
-  const { balance, reloadBalance } = useRoom();
+  const { balance } = useRoom();
   const [showChat, setShowChat] = useState(false);
 
   return (
@@ -47,37 +48,21 @@ export default function GameLayout({ code, gameName, gameIcon, children }: Props
 
         {/* Right: balance + user + chat toggle */}
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-          {/* Balance pill */}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-black"
+          {/* Balance pill (saldo autoritativo, solo lectura) */}
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-black tabular-nums"
             style={{
-              background: 'rgba(255,255,255,0.08)',
-              border: '1px solid rgba(255,255,255,0.15)',
+              background: 'rgba(232,185,35,0.10)',
+              border: '1px solid rgba(232,185,35,0.35)',
+              boxShadow: '0 0 18px -6px rgba(232,185,35,0.45)',
             }}>
-            <span className="text-yellow-300">💰</span>
-            <span className="text-white">${balance.toLocaleString()}</span>
+            <span>🪙</span>
+            <span className="text-gold-200">{formatChips(balance)}</span>
           </div>
 
-          {/* Reload button - only when low */}
-          <AnimatePresence>
-            {balance < 500 && (
-              <motion.button initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                onClick={reloadBalance}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full
-                           text-xs font-bold text-green-300 transition-all animate-pulse"
-                style={{ background: 'rgba(22,101,52,0.5)', border: '1px solid rgba(74,222,128,0.3)' }}>
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Recargar
-              </motion.button>
-            )}
-          </AnimatePresence>
-
           {/* User badge */}
-          <span className="hidden sm:block text-white/40 text-xs">
-            👤 {user?.alias}
+          <span className="hidden sm:flex items-center gap-1 text-white/45 text-xs">
+            <span>👤</span>
+            <span className="font-semibold text-white/70">{user?.alias}</span>
           </span>
 
           {/* Chat toggle */}

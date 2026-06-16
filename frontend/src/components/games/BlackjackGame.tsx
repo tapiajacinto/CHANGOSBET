@@ -33,7 +33,7 @@ const statusLabel: Record<string, string> = {
 interface Props { code: string; }
 
 export default function BlackjackGame({ code: _code }: Props) {
-  const { emit, on, off, myId, balance } = useRoom();
+  const { emit, on, off, myId, balance, placeBet: debitBet } = useRoom();
   const [state, setState] = useState<BlackjackState | null>(null);
   const [betAmount, setBetAmount] = useState(0);
 
@@ -54,13 +54,22 @@ export default function BlackjackGame({ code: _code }: Props) {
   const myPlayer = state?.players.find(p => p.socketId === myId);
   const isMyTurn = state?.currentPlayerSocketId === myId;
 
-  const placeBet = () => {
+  const placeBet = async () => {
     if (!state || state.phase !== 'betting' || betAmount <= 0) return;
+    const ok = await debitBet(betAmount);
+    if (!ok) return;
     emit('blackjack:bet', { playerId: myId, amount: betAmount });
     toast(`Apuesta de $${betAmount.toLocaleString()} confirmada`, { duration: 2000 });
   };
 
-  const action = (type: 'hit' | 'stand' | 'double') => emit(`blackjack:${type}`, { playerId: myId });
+  const action = async (type: 'hit' | 'stand' | 'double') => {
+    if (type === 'double') {
+      const miApuestaActual = myPlayer?.bet ?? 0;
+      const ok = await debitBet(miApuestaActual);
+      if (!ok) return;
+    }
+    emit(`blackjack:${type}`, { playerId: myId });
+  };
 
   return (
     <div className="max-w-5xl mx-auto">

@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment variables (NEVER commit these)
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Build outputs
+dist/
+.next/
+out/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Vercel
+.vercel

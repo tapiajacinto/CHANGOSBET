@@ -1,0 +1,179 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --casino-bg: #0a0a14;
+  --casino-surface: #12122a;
+  --casino-card: #1a1a3a;
+  --casino-gold: #ffd700;
+  --casino-green: #1b4332;
+  --casino-felt: #0d3b2e;
+  --casino-red: #e63946;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  background-color: var(--casino-bg);
+  color: #e2e8f0;
+  font-family: Georgia, 'Times New Roman', serif;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--casino-bg); }
+::-webkit-scrollbar-thumb { background: var(--casino-gold); border-radius: 3px; }
+
+/* Card face */
+.card-face {
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  user-select: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.card-back {
+  background: linear-gradient(135deg, #1a237e 25%, #283593 25%, #283593 50%, #1a237e 50%, #1a237e 75%, #283593 75%);
+  background-size: 20px 20px;
+  border-radius: 6px;
+  border: 2px solid #ffd700;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+/* Felt table */
+.felt-table {
+  background: radial-gradient(ellipse at center, #1b4332 0%, #0d3b2e 60%, #071f18 100%);
+  border: 4px solid #8B6914;
+  border-radius: 16px;
+  box-shadow: inset 0 0 40px rgba(0,0,0,0.5), 0 0 30px rgba(0,0,0,0.8);
+}
+
+/* Gold text glow */
+.gold-glow {
+  color: var(--casino-gold);
+  text-shadow: 0 0 10px rgba(255,215,0,0.6), 0 0 20px rgba(255,215,0,0.3);
+}
+
+/* Casino button */
+.casino-btn {
+  background: linear-gradient(135deg, #b8860b 0%, #ffd700 50%, #b8860b 100%);
+  color: #0a0a14;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 15px rgba(255,215,0,0.3);
+}
+.casino-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(255,215,0,0.5);
+}
+.casino-btn:active { transform: translateY(0); }
+.casino-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Chip */
+.chip {
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 12px;
+  cursor: pointer;
+  border: 3px dashed rgba(255,255,255,0.3);
+  transition: transform 0.15s;
+  user-select: none;
+}
+.chip:hover { transform: scale(1.1); }
+
+/* Roulette bet cell */
+.bet-cell {
+  border: 1px solid rgba(255,215,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-size: 12px;
+  font-weight: bold;
+  position: relative;
+}
+.bet-cell:hover { background: rgba(255,215,0,0.15); }
+.bet-cell.red-cell { background: rgba(230,57,70,0.6); }
+.bet-cell.black-cell { background: rgba(20,20,30,0.8); }
+.bet-cell.green-cell { background: rgba(27,67,50,0.8); }
+
+/* Animations */
+@keyframes dealCard {
+  from { transform: translateY(-60px) rotate(-5deg); opacity: 0; }
+  to   { transform: translateY(0) rotate(0); opacity: 1; }
+}
+.deal-animation { animation: dealCard 0.4s ease-out; }
+
+@keyframes winPulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(255,215,0,0); }
+  50% { box-shadow: 0 0 20px rgba(255,215,0,0.8), 0 0 40px rgba(255,215,0,0.4); }
+}
+.win-pulse { animation: winPulse 1s ease-in-out 3; }
+
+@keyframes horseRunKf {
+  from { transform: translateX(0); }
+  to   { transform: translateX(var(--horse-end)); }
+}
+
+@keyframes ballBounce {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-8px); }
+}
+.ball-bounce { animation: ballBounce 0.5s ease-in-out infinite; }
+
+@keyframes countdownPulse {
+  0%, 100% { color: #ffd700; }
+  50% { color: #e63946; }
+}
+.countdown-urgent { animation: countdownPulse 0.5s ease-in-out infinite; }
+
+/* Poker table oval */
+.poker-table-outer {
+  background: radial-gradient(ellipse at center, #1b4332 0%, #0d3b2e 70%, #071f18 100%);
+  border: 8px solid #8B6914;
+  border-radius: 50%;
+  box-shadow: inset 0 0 60px rgba(0,0,0,0.6), 0 0 40px rgba(0,0,0,0.9);
+}
+
+/* Neon border */
+.neon-border {
+  border: 1px solid var(--casino-gold);
+  box-shadow: 0 0 8px rgba(255,215,0,0.3), inset 0 0 8px rgba(255,215,0,0.05);
+}
+
+/* Glass card */
+.glass-card {
+  background: rgba(26,26,58,0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,215,0,0.2);
+  border-radius: 12px;
+}
+
+/* Sidebar */
+.sidebar-transition {
+  transition: width 0.3s ease, transform 0.3s ease;
+}

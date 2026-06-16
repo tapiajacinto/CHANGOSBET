@@ -1,10 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useSocket } from '@/contexts/SocketContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { BlackjackState, BJPlayer, Card } from '@/types';
+import { useRoom } from '@/contexts/RoomContext';
+import type { BlackjackState, Card } from '@/types';
 import CardComponent from '@/components/ui/CardComponent';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 const CHIP_VALUES = [100, 500, 1000, 5000, 10000];
@@ -22,51 +21,46 @@ function handVal(hand: Card[]): number {
   return total;
 }
 
+const statusColor: Record<string, string> = {
+  bust: 'text-red-500', blackjack: 'text-yellow-400', standing: 'text-blue-400',
+  playing: 'text-green-400', done: 'text-gray-500', betting: 'text-gray-400', waiting: 'text-gray-400',
+};
+const statusLabel: Record<string, string> = {
+  bust: '💥 BUST', blackjack: '🃏 BLACKJACK!', standing: '✋ STAND',
+  playing: '▶ JUGANDO', done: '✓', betting: '💰 APOSTANDO', waiting: '⏳',
+};
+
 interface Props { code: string; }
 
-export default function BlackjackGame({ code }: Props) {
-  const { socket } = useSocket();
-  const { user } = useAuth();
+export default function BlackjackGame({ code: _code }: Props) {
+  const { emit, on, off, myId, balance } = useRoom();
   const [state, setState] = useState<BlackjackState | null>(null);
-  const [selectedChip, setSelectedChip] = useState(500);
   const [betAmount, setBetAmount] = useState(0);
 
   useEffect(() => {
-    if (!socket) return;
-
-    socket.on('blackjack:state', (s: BlackjackState) => {
-      setState(s);
-      if (s.phase === 'betting') setBetAmount(0);
-    });
-    socket.on('blackjack:timer', ({ timeLeft }: { timeLeft: number }) => {
-      setState(prev => prev ? { ...prev, bettingTimeLeft: timeLeft } : prev);
-    });
-
-    return () => {
-      socket.off('blackjack:state');
-      socket.off('blackjack:timer');
+    const onState = (s: unknown) => {
+      setState(s as BlackjackState);
+      if ((s as BlackjackState).phase === 'betting') setBetAmount(0);
     };
-  }, [socket]);
+    const onTimer = (d: unknown) => {
+      const { timeLeft } = d as { timeLeft: number };
+      setState(prev => prev ? { ...prev, bettingTimeLeft: timeLeft } : prev);
+    };
+    on('blackjack:state', onState);
+    on('blackjack:timer', onTimer);
+    return () => { off('blackjack:state', onState); off('blackjack:timer', onTimer); };
+  }, [on, off]);
 
-  const myPlayer = state?.players.find(p => p.socketId === socket?.id);
-  const isMyTurn = state?.currentPlayerSocketId === socket?.id;
+  const myPlayer = state?.players.find(p => p.socketId === myId);
+  const isMyTurn = state?.currentPlayerSocketId === myId;
 
   const placeBet = () => {
-    if (!socket || !state || state.phase !== 'betting') return;
-    socket.emit('blackjack:bet', { amount: betAmount });
+    if (!state || state.phase !== 'betting' || betAmount <= 0) return;
+    emit('blackjack:bet', { playerId: myId, amount: betAmount });
     toast(`Apuesta de $${betAmount.toLocaleString()} confirmada`, { duration: 2000 });
   };
 
-  const addChip = () => setBetAmount(prev => prev + selectedChip);
-
-  const statusColor: Record<string, string> = {
-    bust: 'text-red-500', blackjack: 'text-yellow-400', standing: 'text-blue-400',
-    playing: 'text-green-400', done: 'text-gray-500', betting: 'text-gray-400', waiting: 'text-gray-400',
-  };
-  const statusLabel: Record<string, string> = {
-    bust: '💥 BUST', blackjack: '🃏 BLACKJACK!', standing: '✋ STAND',
-    playing: '▶ JUGANDO', done: '✓', betting: '💰 APOSTANDO', waiting: '⏳',
-  };
+  const action = (type: 'hit' | 'stand' | 'double') => emit(`blackjack:${type}`, { playerId: myId });
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -84,11 +78,9 @@ export default function BlackjackGame({ code }: Props) {
               <div className="w-20 h-28 rounded-lg border-2 border-dashed border-yellow-400/20 flex items-center justify-center text-yellow-400/30">🃏</div>
             )}
           </div>
-          {(state?.dealerHand?.length ?? 0) > 0 && state?.dealerHand && (
+          {(state?.dealerHand?.length ?? 0) > 0 && (
             <p className="text-white text-sm mt-2 font-bold">
-              {state.phase === 'results' || state.phase === 'dealer'
-                ? `Total: ${handVal(state.dealerHand)}`
-                : `Muestra: ${handVal(state.dealerHand.filter(c => c.faceUp))}`}
+              {state?.phase === 'results' ? `Total: ${handVal(state.dealerHand)}` : `Muestra: ${handVal((state?.dealerHand ?? []).filter(c => c.faceUp))}`}
             </p>
           )}
         </div>
@@ -99,42 +91,27 @@ export default function BlackjackGame({ code }: Props) {
             <motion.div key={player.socketId}
               initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
               className={`p-3 rounded-xl text-center min-w-32 ${
-                player.socketId === socket?.id
-                  ? 'bg-yellow-400/10 border-2 border-yellow-400/60'
-                  : 'bg-white/5 border border-white/10'
-              } ${isMyTurn && player.socketId === socket?.id ? 'ring-2 ring-green-400 animate-pulse' : ''}`}>
-
+                player.socketId === myId ? 'bg-yellow-400/10 border-2 border-yellow-400/60' : 'bg-white/5 border border-white/10'
+              } ${isMyTurn && player.socketId === myId ? 'ring-2 ring-green-400 animate-pulse' : ''}`}>
               <p className="text-xs font-bold text-yellow-400 mb-1">
-                {player.alias}
-                {player.socketId === socket?.id && ' (Tú)'}
+                {player.alias}{player.socketId === myId && ' (Tú)'}
               </p>
-
               <div className="flex gap-1 justify-center flex-wrap mb-2">
-                {player.hand.map((card, i) => (
-                  <CardComponent key={i} card={card} size="sm" animated />
-                ))}
+                {player.hand.map((card, i) => <CardComponent key={i} card={card} size="sm" animated />)}
                 {player.hand.length === 0 && player.status === 'waiting' && (
                   <div className="w-10 h-14 rounded border border-dashed border-white/20" />
                 )}
               </div>
-
-              {player.hand.length > 0 && (
-                <p className="text-white text-xs font-bold">{handVal(player.hand)}</p>
-              )}
+              {player.hand.length > 0 && <p className="text-white text-xs font-bold">{handVal(player.hand)}</p>}
               <p className={`text-xs mt-1 ${statusColor[player.status] || 'text-gray-400'}`}>
                 {statusLabel[player.status] || player.status}
               </p>
-              {player.bet > 0 && (
-                <p className="text-yellow-400 text-xs mt-1">💰 ${player.bet.toLocaleString()}</p>
-              )}
+              {player.bet > 0 && <p className="text-yellow-400 text-xs mt-1">💰 ${player.bet.toLocaleString()}</p>}
             </motion.div>
           ))}
         </div>
 
-        {/* Phase message */}
-        {state?.phase === 'betting' && !myPlayer && (
-          <p className="text-center text-gray-400 text-sm mt-4">Esperando apostadores...</p>
-        )}
+        {!state && <p className="text-center text-gray-500 mt-8">Esperando al host para iniciar...</p>}
       </div>
 
       {/* Controls */}
@@ -146,24 +123,22 @@ export default function BlackjackGame({ code }: Props) {
               <span className="text-yellow-400 font-bold text-xl">${betAmount.toLocaleString()}</span>
               <button onClick={() => setBetAmount(0)} className="text-red-400 text-xs hover:text-red-300">Borrar</button>
               <div className="ml-auto flex items-center gap-2">
-                <span className={`text-2xl font-bold ${state.bettingTimeLeft <= 5 ? 'countdown-urgent' : 'text-yellow-400'}`}>
-                  {state.bettingTimeLeft}s
+                <span className={`text-2xl font-bold ${(state?.bettingTimeLeft ?? 15) <= 5 ? 'countdown-urgent' : 'text-yellow-400'}`}>
+                  {state?.bettingTimeLeft ?? 15}s
                 </span>
               </div>
             </div>
-
             <div className="flex gap-2 mb-3 flex-wrap">
               {CHIP_VALUES.map((v, i) => (
-                <button key={v} onClick={() => { setSelectedChip(v); setBetAmount(prev => prev + v); }}
+                <button key={v} onClick={() => setBetAmount(prev => prev + v)}
                   className="chip w-14 h-14"
                   style={{ background: CHIP_COLORS[i], color: v === 100 ? '#1a1a2e' : 'white' }}>
                   ${v >= 1000 ? v/1000+'K' : v}
                 </button>
               ))}
             </div>
-
-            <button onClick={placeBet} disabled={betAmount <= 0}
-              className="casino-btn w-full py-3">
+            <button onClick={placeBet} disabled={betAmount <= 0 || betAmount > balance}
+              className="casino-btn w-full py-3 disabled:opacity-50">
               ✅ Confirmar Apuesta de ${betAmount.toLocaleString()}
             </button>
           </div>
@@ -173,25 +148,16 @@ export default function BlackjackGame({ code }: Props) {
           <div>
             <p className="text-green-400 font-bold text-center mb-3 animate-pulse">¡Es tu turno!</p>
             <div className="flex gap-3 justify-center flex-wrap">
-              <button onClick={() => socket?.emit('blackjack:hit')}
-                className="casino-btn px-8 py-3 bg-green-600 rounded-lg">
-                ➕ Pedir
-              </button>
-              <button onClick={() => socket?.emit('blackjack:stand')}
-                className="px-8 py-3 rounded-lg font-bold uppercase bg-red-700 hover:bg-red-600 text-white transition-colors">
-                ✋ Plantarse
-              </button>
+              <button onClick={() => action('hit')} className="casino-btn px-8 py-3 bg-green-600 rounded-lg">➕ Pedir</button>
+              <button onClick={() => action('stand')} className="px-8 py-3 rounded-lg font-bold uppercase bg-red-700 hover:bg-red-600 text-white transition-colors">✋ Plantarse</button>
               {myPlayer?.hand.length === 2 && (myPlayer?.balance ?? 0) >= (myPlayer?.bet ?? 0) && (
-                <button onClick={() => socket?.emit('blackjack:double')}
-                  className="px-8 py-3 rounded-lg font-bold uppercase bg-yellow-600 hover:bg-yellow-500 text-black transition-colors">
-                  ×2 Doblar
-                </button>
+                <button onClick={() => action('double')} className="px-8 py-3 rounded-lg font-bold uppercase bg-yellow-600 hover:bg-yellow-500 text-black transition-colors">×2 Doblar</button>
               )}
             </div>
           </div>
         )}
 
-        {state?.phase === 'playing' && !isMyTurn && myPlayer?.status !== 'playing' && (
+        {state?.phase === 'playing' && !isMyTurn && (
           <p className="text-center text-gray-400">
             Turno de: <span className="text-yellow-400 font-bold">
               {state.players.find(p => p.socketId === state.currentPlayerSocketId)?.alias ?? '...'}
@@ -201,18 +167,17 @@ export default function BlackjackGame({ code }: Props) {
 
         {state?.phase === 'results' && (
           <div className="text-center">
-            <p className="text-yellow-400 font-bold text-lg mb-2">Ronda finalizada</p>
-            {myPlayer && (
-              <p className={`text-base ${myPlayer.status === 'bust' ? 'text-red-400' : 'text-green-400'}`}>
-                Tu resultado: {statusLabel[myPlayer.status]}
-              </p>
-            )}
-            <p className="text-gray-400 text-sm mt-2">Nueva ronda en unos segundos...</p>
+            <p className="text-yellow-400 font-bold text-lg">🃏 Resultados</p>
+            <div className="flex flex-wrap gap-2 justify-center mt-2">
+              {state.players.map(p => (
+                <div key={p.socketId} className={`px-3 py-2 rounded-lg text-sm ${p.socketId === myId ? 'bg-yellow-400/20' : 'bg-white/5'}`}>
+                  <span className="text-white">{p.alias}: </span>
+                  <span className={statusColor[p.status]}>{statusLabel[p.status]}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-gray-500 text-xs mt-3">Nueva ronda en unos segundos...</p>
           </div>
-        )}
-
-        {!state && (
-          <p className="text-center text-gray-400">Conectando a la mesa...</p>
         )}
       </div>
     </div>

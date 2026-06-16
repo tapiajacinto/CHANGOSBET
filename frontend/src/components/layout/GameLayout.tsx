@@ -1,7 +1,7 @@
 'use client';
-import { ReactNode, useState, useEffect } from 'react';
-import { useSocket } from '@/contexts/SocketContext';
+import { ReactNode, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRoom } from '@/contexts/RoomContext';
 import Link from 'next/link';
 import ChatPanel from '@/components/chat/ChatPanel';
 
@@ -14,26 +14,15 @@ interface Props {
 
 export default function GameLayout({ code, gameName, gameIcon, children }: Props) {
   const { user } = useAuth();
-  const { socket } = useSocket();
-  const [balance, setBalance] = useState(100000);
+  const { balance, reloadBalance } = useRoom();
   const [showChat, setShowChat] = useState(true);
 
-  useEffect(() => {
-    if (!socket) return;
-    const onBalance = ({ balance }: { balance: number }) => setBalance(balance);
-    socket.on('balance:update', onBalance);
-    // Re-sync balance when entering a game page
-    socket.emit('room:request-state');
-    return () => { socket.off('balance:update', onBalance); };
-  }, [socket]);
-
   const reload = () => {
-    socket?.emit('balance:reload');
+    reloadBalance();
   };
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'radial-gradient(ellipse at center, #0d1a24 0%, #0a0a14 100%)' }}>
-      {/* Top bar */}
       <header className="flex items-center justify-between px-4 py-2 border-b border-yellow-400/20 flex-shrink-0">
         <div className="flex items-center gap-3">
           <Link href={`/room/${code}`} className="text-gray-500 hover:text-yellow-400 transition-colors text-sm">
@@ -60,14 +49,11 @@ export default function GameLayout({ code, gameName, gameIcon, children }: Props
         </div>
       </header>
 
-      {/* Main content */}
       <div className="flex flex-1 overflow-hidden">
-        <main className="flex-1 overflow-auto p-4">
-          {children}
-        </main>
+        <main className="flex-1 overflow-auto p-4">{children}</main>
         {showChat && (
           <aside className="w-64 flex-shrink-0 border-l border-yellow-400/20 overflow-hidden">
-            <ChatPanel roomCode={code} />
+            <ChatPanel />
           </aside>
         )}
       </div>

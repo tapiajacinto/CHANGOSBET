@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
-import { SocketProvider } from '@/contexts/SocketContext';
+import { RoomProvider } from '@/contexts/RoomContext';
 import { Toaster } from 'react-hot-toast';
 
 export const metadata: Metadata = {
@@ -14,7 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es">
       <body>
         <AuthProvider>
-          <SocketProvider>
+          <RoomProvider>
             {children}
             <Toaster
               position="top-right"
@@ -27,7 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 },
               }}
             />
-          </SocketProvider>
+          </RoomProvider>
         </AuthProvider>
       </body>
     </html>

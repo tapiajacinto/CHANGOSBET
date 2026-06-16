@@ -1,53 +1,46 @@
--- CHANGOSBET Schema
--- Ejecutar en el SQL Editor de Supabase
+-- CHANGOSBET Schema para Supabase
+-- Ejecutar en: Supabase Dashboard → SQL Editor → Run
 
--- Usuarios
-create table if not exists public.users (
-  id uuid default gen_random_uuid() primary key,
-  alias text not null unique,
-  balance bigint not null default 100000,
-  total_won bigint not null default 0,
-  total_lost bigint not null default 0,
-  games_played int not null default 0,
+-- Jugadores (sin Supabase Auth, UUID generado en el browser)
+create table if not exists public.players (
+  id       text primary key,
+  alias    text not null,
+  balance  bigint not null default 100000,
   created_at timestamptz default now()
 );
 
--- Salas
+-- Salas privadas
 create table if not exists public.rooms (
-  id uuid default gen_random_uuid() primary key,
-  code text not null unique,
-  name text not null,
-  game_type text not null check (game_type in ('roulette','blackjack','poker','horses','football')),
-  host_id uuid references public.users(id),
-  status text not null default 'active',
-  created_at timestamptz default now(),
-  ended_at timestamptz
+  code       text primary key,
+  name       text not null,
+  game_type  text not null check (game_type in ('roulette','blackjack','poker','horses','football')),
+  host_id    text not null references public.players(id),
+  status     text default 'active',
+  created_at timestamptz default now()
 );
 
--- Historial de partidas
-create table if not exists public.game_history (
-  id uuid default gen_random_uuid() primary key,
-  room_code text not null,
-  player_id uuid references public.users(id),
-  alias text not null,
-  game_type text not null,
-  amount_bet bigint not null default 0,
-  amount_won bigint not null default 0,
-  result text,
-  played_at timestamptz default now()
-);
+-- RLS permisivo (casino privado entre amigos, sin plata real)
+alter table public.players enable row level security;
+alter table public.rooms   enable row level security;
 
--- RLS (Row Level Security)
-alter table public.users enable row level security;
-alter table public.rooms enable row level security;
-alter table public.game_history enable row level security;
+drop policy if exists "allow_all_players" on public.players;
+drop policy if exists "allow_all_rooms"   on public.rooms;
 
--- Policies: permitir todo por ahora (es un juego privado)
-create policy "Allow all" on public.users for all using (true) with check (true);
-create policy "Allow all" on public.rooms for all using (true) with check (true);
-create policy "Allow all" on public.game_history for all using (true) with check (true);
+create policy "allow_all_players" on public.players for all using (true) with check (true);
+create policy "allow_all_rooms"   on public.rooms   for all using (true) with check (true);
+
+-- Función para sumar/restar fichas (la ejecuta el host desde el browser)
+create or replace function public.add_to_balance(p_id text, delta bigint)
+returns bigint language sql security definer as $$
+  update public.players
+  set balance = greatest(0, balance + delta)
+  where id = p_id
+  returning balance;
+$$;
+
+-- Habilitar Supabase Realtime para las tablas
+alter publication supabase_realtime add table public.players;
+alter publication supabase_realtime add table public.rooms;
 
 -- Índices
-create index if not exists idx_rooms_code on public.rooms(code);
-create index if not exists idx_game_history_player on public.game_history(player_id);
-create index if not exists idx_game_history_room on public.game_history(room_code);
+create index if not exists idx_rooms_host on public.rooms(host_id);

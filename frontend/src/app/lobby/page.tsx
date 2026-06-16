@@ -72,7 +72,7 @@ export default function LobbyPage() {
 
         <div className="flex items-center gap-2.5">
           <span className="text-xl">🃏</span>
-          <span className="font-black text-red-700 text-lg">Casino de Amigos</span>
+          <span className="font-black text-red-700 text-lg">CHANGOSBET</span>
         </div>
 
         <div className="flex items-center gap-3 sm:gap-5">

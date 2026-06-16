@@ -5,7 +5,7 @@ import { RoomProvider } from '@/contexts/RoomContext';
 import { Toaster } from 'react-hot-toast';
 
 export const metadata: Metadata = {
-  title: 'Casino de Amigos',
+  title: 'CHANGOSBET',
   description: 'Casino virtual multijugador con fichas ilimitadas — 100% gratuito',
 };
 

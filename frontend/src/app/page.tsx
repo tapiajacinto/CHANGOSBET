@@ -337,7 +337,7 @@ export default function HomePage() {
           <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }} className="text-center mb-14">
             <h2 className="text-3xl sm:text-4xl font-black text-red-700 mb-3">
-              ¿Por qué Casino de Amigos?
+              ¿Por qué CHANGOSBET?
             </h2>
             <p className="text-red-400 text-base sm:text-lg">El único casino donde TODOS ganan diversión</p>
           </motion.div>
@@ -524,7 +524,7 @@ export default function HomePage() {
           <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }} className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-black text-white mb-2">Estadísticas en Vivo</h2>
-            <p className="text-white/40">Lo que está pasando ahora mismo en Casino de Amigos</p>
+            <p className="text-white/40">Lo que está pasando ahora mismo en CHANGOSBET</p>
           </motion.div>
 
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 sm:gap-8">
@@ -650,7 +650,7 @@ export default function HomePage() {
         style={{ background: '#280000' }}>
         <div className="flex items-center justify-center gap-2 mb-3">
           <span className="text-xl">🃏</span>
-          <span className="text-white font-black text-lg">Casino de Amigos</span>
+          <span className="text-white font-black text-lg">CHANGOSBET</span>
         </div>
         <p className="text-white/25 text-sm mb-1">
           Solo dinero ficticio · 0% riesgo real · Hecho para jugar con amigos

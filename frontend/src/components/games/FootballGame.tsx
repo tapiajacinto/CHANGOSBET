@@ -1626,9 +1626,9 @@ export default function FootballGame({ code: _code }: Props) {
           {/* HERO BANNER */}
           <div className="relative rounded-2xl overflow-hidden" style={{ height: 140 }}>
             <div className="absolute inset-0"
-              style={{ backgroundImage: 'url(/messi.jpg)', backgroundSize: 'cover', backgroundPosition: 'right 15%' }} />
+              style={{ backgroundImage: 'url(/messi.jpg)', backgroundSize: 'cover', backgroundPosition: 'center 25%' }} />
             <div className="absolute inset-0"
-              style={{ background: 'linear-gradient(90deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.8) 45%, rgba(0,0,0,0.25) 80%, transparent 100%)' }} />
+              style={{ background: 'linear-gradient(90deg, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.7) 40%, rgba(0,0,0,0.15) 70%, transparent 100%)' }} />
             <div className="absolute top-0 left-0 right-0 h-0.5"
               style={{ background: 'linear-gradient(90deg, #dc2626, #ef4444, #dc2626)' }} />
             <div className="absolute inset-0 flex flex-col justify-center px-6">
